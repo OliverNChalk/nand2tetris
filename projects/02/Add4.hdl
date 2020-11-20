@@ -1,0 +1,62 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/02/Adder16.hdl
+
+/**
+ * Adds two 4-bit values.
+ * Overflow outCarry is outputted
+ */
+
+CHIP Add4 {
+    IN a[4], b[4], inCarry;
+    OUT out[4], outCarry;
+
+    PARTS:
+    And (a=a[0], b=b[0], out=genZero);
+    And (a=a[1], b=b[1], out=genOne);
+    And (a=a[2], b=b[2], out=genTwo);
+    And (a=a[3], b=b[3], out=genThree);
+    Or  (a=a[0], b=b[0], out=orZero);
+    Or  (a=a[1], b=b[1], out=orOne);
+    Or  (a=a[2], b=b[2], out=orTwo);
+    Or  (a=a[3], b=b[3], out=orThree);
+
+    // Carry Zero
+    And (a=orZero, b=inCarry, out=orZeroCarry);
+
+    Or  (a=genZero, b=orZeroCarry, out=carZero);
+
+    // Carry One
+    And (a=orOne, b=genZero, out=orOneGenZero);
+    And (a=orOne, b=orZeroCarry, out=orOneZeroCarry);
+
+    Or  (a=orOneGenZero, b=orOneZeroCarry, out=firstCarry);
+    Or  (a=genOne, b=firstCarry, out=carOne);
+
+    // Carry Two
+    And (a=orTwo, b=genOne, out=orTwoGenOne);
+    And (a=orTwo, b=orOneGenZero, out=orTwoOneGenZero);
+    And (a=orTwo, b=orOneZeroCarry, out=orTwoOneZeroCarry);
+
+    Or  (a=genTwo, b=orTwoGenOne, out=secondCarry1);
+    Or  (a=orTwoOneGenZero, b=orTwoOneZeroCarry, out=secondCarry2);
+    Or  (a=secondCarry1, b=secondCarry2, out=carTwo);
+
+    // Carry Three
+    And (a=orThree, b=genTwo, out=orThreeGenTwo);
+    And (a=orThree, b=orTwoGenOne, out=orThreeTwoGenOne);
+    And (a=orThree, b=orTwoOneGenZero, out=orThreeTwoOneGenZero);
+    And (a=orThree, b=orTwoOneZeroCarry, out=orThreeTwoOneZeroCarry);
+
+    Or  (a=orThreeGenTwo, b=orThreeTwoGenOne, out=thirdCarry1);
+    Or  (a=orThreeTwoOneGenZero, b=thirdCarry1, out=thirdCarry2);
+    Or  (a=orThreeTwoOneZeroCarry, b=thirdCarry2, out=thirdCarry3);
+    Or  (a=genThree, b=thirdCarry3, out=outCarry);
+
+    // Compute Sums
+    FullAdder (a=a[0], b=b[0], c=inCarry, sum=out[0]);
+    FullAdder (a=a[1], b=b[1], c=carZero, sum=out[1]);
+    FullAdder (a=a[2], b=b[2], c=carOne, sum=out[2]);
+    FullAdder (a=a[3], b=b[3], c=carTwo, sum=out[3]);
+}

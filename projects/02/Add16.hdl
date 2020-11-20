@@ -13,20 +13,11 @@ CHIP Add16 {
     OUT out[16];
 
     PARTS:
-    FullAdder (a=a[0], b=b[0], c=false, sum=out[0], carry=firstCarry);
-    FullAdder (a=a[1], b=b[1], c=firstCarry, sum=out[1], carry=secondCarry);
-    FullAdder (a=a[2], b=b[2], c=secondCarry, sum=out[2], carry=thirdCarry);
-    FullAdder (a=a[3], b=b[3], c=thirdCarry, sum=out[3], carry=fourthCarry);
-    FullAdder (a=a[4], b=b[4], c=fourthCarry, sum=out[4], carry=fifthCarry);
-    FullAdder (a=a[5], b=b[5], c=fifthCarry, sum=out[5], carry=sixthCarry);
-    FullAdder (a=a[6], b=b[6], c=sixthCarry, sum=out[6], carry=seventhCarry);
-    FullAdder (a=a[7], b=b[7], c=seventhCarry, sum=out[7], carry=eighthCarry);
-    FullAdder (a=a[8], b=b[8], c=eighthCarry, sum=out[8], carry=ninthCarry);
-    FullAdder (a=a[9], b=b[9], c=ninthCarry, sum=out[9], carry=tenthCarry);
-    FullAdder (a=a[10], b=b[10], c=tenthCarry, sum=out[10], carry=eleventhCarry);
-    FullAdder (a=a[11], b=b[11], c=eleventhCarry, sum=out[11], carry=twelfthCarry);
-    FullAdder (a=a[12], b=b[12], c=twelfthCarry, sum=out[12], carry=thirteenthCarry);
-    FullAdder (a=a[13], b=b[13], c=thirteenthCarry, sum=out[13], carry=fourteenthCarry);
-    FullAdder (a=a[14], b=b[14], c=fourteenthCarry, sum=out[14], carry=fifteenthCarry);
-    FullAdder (a=a[15], b=b[15], c=fifteenthCarry, sum=out[15]);
+    Add4 (a=a[0..3], b=b[0..3], inCarry=false, out=out[0..3], outCarry=firstCarry);
+
+    Add4 (a=a[4..7], b=b[4..7], inCarry=firstCarry, out=out[4..7], outCarry=secondCarry);
+
+    Add4 (a=a[8..11], b=b[8..11], inCarry=secondCarry, out=out[8..11], outCarry=thirdCarry);
+
+    Add4 (a=a[12..15], b=b[12..15], inCarry=thirdCarry, out=out[12..15]);
 }
