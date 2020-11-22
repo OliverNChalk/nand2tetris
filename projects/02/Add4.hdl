@@ -50,8 +50,8 @@ CHIP Add4 {
     And (a=orThree, b=orTwoOneZeroCarry, out=orThreeTwoOneZeroCarry);
 
     Or  (a=orThreeGenTwo, b=orThreeTwoGenOne, out=thirdCarry1);
-    Or  (a=orThreeTwoOneGenZero, b=thirdCarry1, out=thirdCarry2);
-    Or  (a=orThreeTwoOneZeroCarry, b=thirdCarry2, out=thirdCarry3);
+    Or  (a=orThreeTwoOneGenZero, b=orThreeTwoOneZeroCarry, out=thirdCarry2);
+    Or  (a=thirdCarry1, b=thirdCarry2, out=thirdCarry3);
     Or  (a=genThree, b=thirdCarry3, out=outCarry);
 
     // Compute Sums
