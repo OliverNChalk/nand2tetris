@@ -15,5 +15,35 @@ CHIP RAM8 {
     OUT out[16];
 
     PARTS:
-    // Put your code here:
+    // Route the load bit
+    DMux (in=load, sel=address[2], a=top, b=bottom);
+
+    DMux (in=top, sel=address[1], a=first, b=second);
+    DMux (in=bottom, sel=address[1], a=third, b=fourth);
+
+    DMux (in=first, sel=address[0], a=zero, b=one);
+    DMux (in=second, sel=address[0], a=two, b=three);
+    DMux (in=third, sel=address[0], a=four, b=five);
+    DMux (in=fourth, sel=address[0], a=six, b=seven);
+
+    // Registers
+    Register (in=in, load=zero, out=reg0Out);
+    Register (in=in, load=one, out=reg1Out);
+    Register (in=in, load=two, out=reg2Out);
+    Register (in=in, load=three, out=reg3Out);
+    Register (in=in, load=four, out=reg4Out);
+    Register (in=in, load=five, out=reg5Out);
+    Register (in=in, load=six, out=reg6Out);
+    Register (in=in, load=seven, out=reg7Out);
+
+    // Route the register output
+    Mux16 (a=reg0Out, b=reg1Out, sel=address[0], out=firstOut);
+    Mux16 (a=reg2Out, b=reg3Out, sel=address[0], out=secondOut);
+    Mux16 (a=reg4Out, b=reg5Out, sel=address[0], out=thirdOut);
+    Mux16 (a=reg6Out, b=reg7Out, sel=address[0], out=fourthOut);
+
+    Mux16 (a=firstOut, b=secondOut, sel=address[1], out=topOut);
+    Mux16 (a=thirdOut, b=fourthOut, sel=address[1], out=bottomOut);
+
+    Mux16 (a=topOut, b=bottomOut, sel=address[2], out=out);
 }

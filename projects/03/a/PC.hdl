@@ -16,5 +16,19 @@ CHIP PC {
     OUT out[16];
 
     PARTS:
-    // Put your code here:
+
+    // Update register if any of reset, load, and inc bits are set
+    Or8Way (in[0]=reset, in[1]=load, in[2]=inc, out=shouldLoad);
+
+    // Prioritze reset over load over inc
+    Mux16 (a=in, b=false, sel=reset, out=resetLoad);
+    Add16 (a=currentCount, b[0]=true, out=incrementedCount);
+
+    Or    (a=load, b=reset, out=shouldResetOrLoad);
+    Not   (in=shouldResetOrLoad, out=shouldNotResetOrLoad);
+    And   (a=shouldNotResetOrLoad, b=inc, out=shouldInc);
+    Mux16 (a=resetLoad, b=incrementedCount, sel=shouldInc, out=registerIn);
+
+    // Save next count to register, route current value to out
+    Register (in=registerIn, load=shouldLoad, out=currentCount, out=out);
 }

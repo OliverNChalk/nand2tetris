@@ -15,5 +15,21 @@ CHIP RAM16K {
     OUT out[16];
 
     PARTS:
-    // Put your code here:
+    // Route the load bit
+    DMux (in=load, sel=address[13], a=top, b=bottom);
+
+    DMux (in=top, sel=address[12], a=first, b=second);
+    DMux (in=bottom, sel=address[12], a=third, b=fourth);
+
+    // Ram Bays
+    RAM4K (in=in, load=first, address=address[0..11], out=ram0Out);
+    RAM4K (in=in, load=second, address=address[0..11], out=ram1Out);
+    RAM4K (in=in, load=third, address=address[0..11], out=ram2Out);
+    RAM4K (in=in, load=fourth, address=address[0..11], out=ram3Out);
+
+    // Route the ram output
+    Mux16 (a=ram0Out, b=ram1Out, sel=address[12], out=topOut);
+    Mux16 (a=ram2Out, b=ram3Out, sel=address[12], out=bottomOut);
+
+    Mux16 (a=topOut, b=bottomOut, sel=address[13], out=out);
 }
