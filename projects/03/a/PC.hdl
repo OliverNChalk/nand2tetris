@@ -21,6 +21,7 @@ CHIP PC {
     Or8Way (in[0]=reset, in[1]=load, in[2]=inc, out=shouldLoad);
 
     // Prioritze reset over load over inc
+    // NOTE: Can also be achieved using Mux16s in reverse order (Mux between inc and no-inc, then a and load, then b and reset)
     Mux16 (a=in, b=false, sel=reset, out=resetLoad);
     Add16 (a=currentCount, b[0]=true, out=incrementedCount);
 
@@ -30,5 +31,6 @@ CHIP PC {
     Mux16 (a=resetLoad, b=incrementedCount, sel=shouldInc, out=registerIn);
 
     // Save next count to register, route current value to out
+    // NOTE: Can be refactored using an Inc16
     Register (in=registerIn, load=shouldLoad, out=currentCount, out=out);
 }

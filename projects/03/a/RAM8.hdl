@@ -16,6 +16,7 @@ CHIP RAM8 {
 
     PARTS:
     // Route the load bit
+    // NOTE: Can be refactored using a DMux8Way
     DMux (in=load, sel=address[2], a=top, b=bottom);
 
     DMux (in=top, sel=address[1], a=first, b=second);
@@ -37,6 +38,7 @@ CHIP RAM8 {
     Register (in=in, load=seven, out=reg7Out);
 
     // Route the register output
+    // NOTE: Can be refactored using a Mux8Way16
     Mux16 (a=reg0Out, b=reg1Out, sel=address[0], out=firstOut);
     Mux16 (a=reg2Out, b=reg3Out, sel=address[0], out=secondOut);
     Mux16 (a=reg4Out, b=reg5Out, sel=address[0], out=thirdOut);
