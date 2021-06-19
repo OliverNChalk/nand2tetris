@@ -16,20 +16,20 @@ CHIP RAM16K {
 
     PARTS:
     // Route the load bit
-    DMux (in=load, sel=address[13], a=top, b=bottom);
-
-    DMux (in=top, sel=address[12], a=first, b=second);
-    DMux (in=bottom, sel=address[12], a=third, b=fourth);
+    DMux4Way (
+        in=load, sel=address[12..13],
+        a=one, b=two, c=three, d=four
+    );
 
     // Ram Bays
-    RAM4K (in=in, load=first, address=address[0..11], out=ram0Out);
-    RAM4K (in=in, load=second, address=address[0..11], out=ram1Out);
-    RAM4K (in=in, load=third, address=address[0..11], out=ram2Out);
-    RAM4K (in=in, load=fourth, address=address[0..11], out=ram3Out);
+    RAM4K (in=in, load=one, address=address[0..11], out=ram0Out);
+    RAM4K (in=in, load=two, address=address[0..11], out=ram1Out);
+    RAM4K (in=in, load=three, address=address[0..11], out=ram2Out);
+    RAM4K (in=in, load=four, address=address[0..11], out=ram3Out);
 
     // Route the ram output
-    Mux16 (a=ram0Out, b=ram1Out, sel=address[12], out=topOut);
-    Mux16 (a=ram2Out, b=ram3Out, sel=address[12], out=bottomOut);
-
-    Mux16 (a=topOut, b=bottomOut, sel=address[13], out=out);
+    Mux4Way16 (
+        a=ram0Out, b=ram1Out, c=ram2Out, d=ram3Out,
+        sel=address[12..13], out=out
+    );
 }

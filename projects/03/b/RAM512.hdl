@@ -16,15 +16,11 @@ CHIP RAM512 {
 
     PARTS:
     // Route the load bit
-    DMux (in=load, sel=address[8], a=top, b=bottom);
-
-    DMux (in=top, sel=address[7], a=first, b=second);
-    DMux (in=bottom, sel=address[7], a=third, b=fourth);
-
-    DMux (in=first, sel=address[6], a=zero, b=one);
-    DMux (in=second, sel=address[6], a=two, b=three);
-    DMux (in=third, sel=address[6], a=four, b=five);
-    DMux (in=fourth, sel=address[6], a=six, b=seven);
+    DMux8Way (
+        in=load, sel=address[6..8],
+        a=zero, b=one, c=two, d=three,
+        e=four, f=five, g=six, h=seven
+    );
 
     // Ram Bays
     RAM64 (in=in, load=zero, address=address[0..5], out=ram0Out);
@@ -37,13 +33,9 @@ CHIP RAM512 {
     RAM64 (in=in, load=seven, address=address[0..5], out=ram7Out);
 
     // Route the ram output
-    Mux16 (a=ram0Out, b=ram1Out, sel=address[6], out=firstOut);
-    Mux16 (a=ram2Out, b=ram3Out, sel=address[6], out=secondOut);
-    Mux16 (a=ram4Out, b=ram5Out, sel=address[6], out=thirdOut);
-    Mux16 (a=ram6Out, b=ram7Out, sel=address[6], out=fourthOut);
-
-    Mux16 (a=firstOut, b=secondOut, sel=address[7], out=topOut);
-    Mux16 (a=thirdOut, b=fourthOut, sel=address[7], out=bottomOut);
-
-    Mux16 (a=topOut, b=bottomOut, sel=address[8], out=out);
+    Mux8Way16 (
+        a=ram0Out, b=ram1Out, c=ram2Out, d=ram3Out,
+        e=ram4Out, f=ram5Out, g=ram6Out, h=ram7Out,
+        sel=address[6..8], out=out
+    );
 }
