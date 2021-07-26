@@ -27,36 +27,22 @@ CHIP Memory {
     OUT out[16];
 
     PARTS:
-    // 0..14 of address to RAM16K
-    // 0..15 of address to Screen
+    // 0..13 of address to RAM16K
+    // 0..12 of address to Screen
     // if address[14] == 1 && address[13] == 0, return screen
     // if address[14] == 1 && address[13] == 1, return keyboard
     // TODO: Could run And16 on remaining bits to ensure no out of range error
     // Would just run in the case of keyboard
 
-    // Is ram selected?
-    Not      (in=address[13], out=not13);
-    Not      (in=address[14], out=ramSelected);
+    // Route load bit to appropriate memory bank
+    DMux4Way  (in=load, a=ram1, b=ram2, c=screen, d=null, sel=address[13..14]);
+    Or        (a=ram1, b=ram2, out=ram);
 
-    // Is screen selected?
-    And      (a=not13, b=address[14], out=screenSelected);
+    // Handle internal memory banks
+    RAM16K    (in=in, load=ram, address=address[0..13], out=ramOut);
+    Screen    (in=in, load=screen, address=address[0..12], out=screenOut);
+    Keyboard  (out=keyboardOut);
 
-    // If keyboard selected?
-    Not      (in=ramSelected, out=notRamSelected);
-    Not      (in=screenSelected, out=notScreenSelected);
-    And      (a=notRamSelected, b=notScreenSelected, out=keyboardSelected);
-
-    // Should we load ram/screen?
-    And      (a=load, b=ramSelected, out=loadRam);
-    And      (a=load, b=screenSelected, out=loadScreen);
-
-    // Feed memory banks with inputs
-    RAM16K   (in=in, load=loadRam, address=address[0..13], out=ramOut);
-    Screen   (in=in, load=loadScreen, address=address[0..12], out=screenOut);
-    Keyboard (out=keyboardOut);
-
-    // Filter outputs
-    Mux16    (a=ramOut, b=screenOut, sel=screenSelected, out=ramOrScreenOut);
-    Mux16    (a=keyboardOut, b=ramOut, sel=ramSelected, out=keyboardOrRamOut);
-    Mux16    (a=ramOrScreenOut, b=keyboardOrRamOut, sel=keyboardSelected, out=out);
+    // Rout output according to address
+    Mux4Way16 (a=ramOut, b=ramOut, c=screenOut, d=keyboardOut, sel=address[13..14], out=out);
 }
