@@ -59,14 +59,11 @@ CHIP ALU {
     // Choose & or +, f() or !f()
     Mux16 (a=xyAnd, b=xySum, sel=f, out=xyAndOrSum);
     Not16 (in=xyAndOrSum, out=notOut);
-    Mux16 (a=xyAndOrSum, b=notOut, sel=no, out=out, out[0..7]=result1, out[8..15]=result2, out[15]=resultNg);
+    Mux16 (a=xyAndOrSum, b=notOut, sel=no, out=out, out[0..7]=result1, out[8..15]=result2, out[15]=ng);
 
     // Calculate zr
     Or8Way (in=result1, out=orOut1);
     Or8Way (in=result2, out=orOut2);
     Or     (a=orOut1, b=orOut2, out=outNonZero);
     Not    (in=outNonZero, out=zr);
-
-    // Calculate ng
-    And    (a=resultNg, b=true, out=ng);
 }

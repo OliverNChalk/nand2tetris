@@ -40,4 +40,46 @@ CHIP CPU {
 
     PARTS:
     // Put your code here:
+
+    // Handle A-instruction
+    Mux16    (a=instruction[0..14], b=aluOutputToA, sel=instruction[15], out=aInput);
+
+    // A Register
+    Not      (in=instruction[15], out=isAInstruction);
+    Or       (a=isAInstruction, b=saveToA, out=loadA);
+
+    Register (in=aInput, load=loadA, out=regAOutput);
+
+    // D Register
+    Register (in=aluOut, load=saveToD, out=dOut);
+
+    // Handle C-instruction
+    // Handle a bit
+    Mux16 (a=aOut, b=inM, sel=instruction[3], out=selectedY);
+
+    // Handle d[3] bits
+    And   (a=instruction[15], b=instruction[10], out=saveToA);  // if d[0] == 1 { save in A; }
+    And   (a=instruction[15], b=instruction[11], out=saveToD);  // if d[1] == 1 { save in D; }
+    And   (a=instruction[15], b=instruction[12], out=writeM);   // if d[2] == 1 { save in M; }
+
+    // Handle j[3] bits
+    
+    // Handle c[6] bits
+    
+    // ALU
+    ALU (
+        // IN:
+        x=dOut,            // x = D-register
+        y=selectedY,       // y = A-register or M-register
+        zx=instruction[4], // c1 = instruction[4] = zero x
+        nx=instruction[5], // c2 = instruction[5] = negate x
+        zy=instruction[6], // c3 = instruction[6] = zero y
+        ny=instruction[7], // c4 = instruction[7] = negate y
+        f =instruction[8], // c5 = instruction[8] = compute x+y or x & y
+        no=instruction[9], // c6 = instruction[9] = negate out
+        // OUT:
+        out=aluOut,   // 16-bit output
+        zr=,          // 1 if (out ==0), 0 otherwise
+        ng=,          // 1 if (out < 0), 1 otherwise
+    );
 }
