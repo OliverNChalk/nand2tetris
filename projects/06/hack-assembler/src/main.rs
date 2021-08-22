@@ -3,6 +3,19 @@ use std::env;
 use std::error::Error;
 use std::fs;
 
+fn main() {
+    let args: Vec<String> = env::args().collect();
+
+    if let Some(first_arg) = args.get(1) {
+        let result = read_lines(&first_arg).unwrap();
+        let result = clean_whitespace(result);
+
+        for line in result.iter() {
+            println!("{}", translate_line(line));
+        }
+    }
+}
+
 fn read_lines(file_name: &str) -> Result<Vec<String>, Box<dyn Error>> {
     let file = fs::read_to_string(file_name)?;
     let lines = file.lines().map(str::to_owned).collect();
@@ -30,7 +43,7 @@ fn translate_line(line: &str) -> String {
     let first_char = line.chars().nth(0);
 
     return match first_char {
-        None => "EMPTY LINE".to_owned(),
+        None => "".to_owned(),
         Some('(') => "SYMBOL".to_owned(),
         Some('@') => translate_a(line).unwrap_or("".to_owned()),
         _ => translate_c(line),
@@ -52,27 +65,94 @@ fn translate_a(line: &str) -> Option<String> {
 }
 
 fn translate_c(line: &str) -> String {
-    if let Some((dest, _)) = line.split_once('=') {
-        return format!("DEST: {}", dest);
+    let boundaries = &['=', ';'][..];
+    line.split(boundaries).next();
+
+    let mut dest = None;
+    let mut comp = line;
+    let mut jump = None;
+    if let Some(split) = line.split_once('=') {
+        dest = Some(split.0);
+        comp = split.1;
     }
 
-    if let Some((_, jump)) = line.split_once(';') {
-        return format!("JUMP: {}", jump);
+    if let Some(split) = line.split_once(';') {
+        comp = split.0;
+        jump = Some(split.1);
+    }
+
+    let dest = translate_dest(dest);
+    let comp = translate_comp(comp);
+    let jump = translate_jump(jump);
+
+    return format!("111{}{}{}", comp, dest, jump);
+}
+
+// TODO: Instead of an eight arm match, we can just translate each char to a bit and then add them together
+fn translate_dest(source: Option<&str>) -> String {
+    if let Some(dest) = source {
+        match dest {
+            "M" => "001".to_owned(),
+            "D" => "010".to_owned(),
+            "MD" => "011".to_owned(),
+            "A" => "100".to_owned(),
+            "AM" => "101".to_owned(),
+            "AD" => "110".to_owned(),
+            "AMD" => "111".to_owned(),
+            _ => panic!("Invalid dest instruction {}", dest),
+        }
     } else {
-        return format!("INVALID C-INST");
+        "000".to_owned()
     }
 }
 
-fn main() {
-    let args: Vec<String> = env::args().collect();
+fn translate_comp(source: &str) -> String {
+    match source {
+        "0" => "0101010".to_owned(),
+        "1" => "0111111".to_owned(),
+        "-1" => "0111010".to_owned(),
+        "D" => "0001100".to_owned(),
+        "A" => "0110000".to_owned(),
+        "!D" => "0001101".to_owned(),
+        "!A" => "0110001".to_owned(),
+        "-D" => "0001111".to_owned(),
+        "-A" => "0110011".to_owned(),
+        "D+1" => "0011111".to_owned(),
+        "A+1" => "0110111".to_owned(),
+        "D-1" => "0001110".to_owned(),
+        "A-1" => "0110010".to_owned(),
+        "D+A" => "0000010".to_owned(),
+        "D-A" => "0010011".to_owned(),
+        "A-D" => "0000111".to_owned(),
+        "D&A" => "0000000".to_owned(),
+        "D|A" => "0010101".to_owned(),
+        "M" => "1110000".to_owned(),
+        "!M" => "1110001".to_owned(),
+        "-M" => "1110011".to_owned(),
+        "M+1" => "1110111".to_owned(),
+        "M-1" => "1110010".to_owned(),
+        "D+M" => "1000010".to_owned(),
+        "D-M" => "1010011".to_owned(),
+        "M-D" => "1000111".to_owned(),
+        "D&M" => "1000000".to_owned(),
+        "D|M" => "1010101".to_owned(),
+        _ => panic!("Invalid comp instruction: {}", source),
+    }
+}
 
-    if let Some(first_arg) = args.get(1) {
-        let result = read_lines(&first_arg).unwrap();
-        let result = clean_whitespace(result);
-
-        for (i, line) in result.iter().enumerate() {
-            println!("{}: {}", i, line);
-            println!("{}", translate_line(line));
+fn translate_jump(source: Option<&str>) -> String {
+    if let Some(jump) = source {
+        match jump {
+            "JGT" => "001".to_owned(),
+            "JEQ" => "010".to_owned(),
+            "JGE" => "011".to_owned(),
+            "JLT" => "100".to_owned(),
+            "JNE" => "101".to_owned(),
+            "JLE" => "110".to_owned(),
+            "JMP" => "111".to_owned(),
+            _ => panic!("Invalid jump instruction: {}", jump),
         }
+    } else {
+        "000".to_owned()
     }
 }
