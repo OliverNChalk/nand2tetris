@@ -3,5 +3,5 @@
 version = 3
 
 [[package]]
-name = "hack-compiler"
+name = "hack-assembler"
 version = "0.1.0"
