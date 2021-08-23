@@ -88,22 +88,22 @@ fn translate_c(line: &str) -> String {
     return format!("111{}{}{}", comp, dest, jump);
 }
 
-// TODO: Instead of an eight arm match, we can just translate each char to a bit and then add them together
 fn translate_dest(source: Option<&str>) -> String {
+    let mut result = 0;
+
     if let Some(dest) = source {
-        match dest {
-            "M" => "001".to_owned(),
-            "D" => "010".to_owned(),
-            "MD" => "011".to_owned(),
-            "A" => "100".to_owned(),
-            "AM" => "101".to_owned(),
-            "AD" => "110".to_owned(),
-            "AMD" => "111".to_owned(),
-            _ => panic!("Invalid dest instruction {}", dest),
+        if dest.contains('A') {
+            result += 4;
         }
-    } else {
-        "000".to_owned()
+        if dest.contains('D') {
+            result += 2;
+        }
+        if dest.contains('M') {
+            result += 1;
+        }
     }
+
+    return format!("{:03b}", result);
 }
 
 fn translate_comp(source: &str) -> String {
