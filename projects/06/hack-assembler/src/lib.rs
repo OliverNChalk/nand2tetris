@@ -1,42 +1,111 @@
-pub fn clean_whitespace(mut file: Vec<String>) -> Vec<String> {
-    for i in 0..file.len() {
-        let line = &mut file[i];
+use std::collections::HashMap;
 
-        // Remove everything after a comment
-        if let Some(test) = line.find("//") {
-            line.truncate(test);
-        }
+const USER_MEM_START: u32 = 16;
+const PREDEFINED_SYMBOLS: [(&str, u32); 23] = [
+    ("R0", 0),
+    ("R1", 1),
+    ("R2", 2),
+    ("R3", 3),
+    ("R4", 4),
+    ("R5", 5),
+    ("R6", 6),
+    ("R7", 7),
+    ("R8", 8),
+    ("R9", 9),
+    ("R10", 10),
+    ("R11", 11),
+    ("R12", 12),
+    ("R13", 13),
+    ("R14", 14),
+    ("R15", 15),
+    ("SP", 0),
+    ("LCL", 1),
+    ("ARG", 2),
+    ("THIS", 3),
+    ("THAT", 4),
+    ("SCREEN", 16384),
+    ("KBD", 24576),
+];
 
-        // Remove all whitespace
-        *line = line.trim().to_owned();
-    }
+pub fn translate_file(file: &Vec<String>) -> String {
+    let (instructions, mut symbols, label_count) = process_raw_file(file);
 
-    return file;
+    let result: Vec<String> = instructions
+        .iter()
+        .map(|x| translate_line(x, &mut symbols, label_count))
+        .collect();
+
+    return result.join("\n") + "\n";
 }
 
-pub fn translate_line(line: &str) -> String {
+fn process_raw_file(file: &Vec<String>) -> (Vec<String>, HashMap<&str, u32>, u32) {
+    let mut instructions = Vec::with_capacity(file.len());
+    let mut labels: HashMap<&str, u32> = PREDEFINED_SYMBOLS.iter().map(|x| *x).collect();
+    let mut inst_count = 0;
+    let mut label_count = 0;
+
+    for line in file {
+        let clean_line;
+        if let Some((pre_comment, _)) = line.split_once("//") {
+            clean_line = pre_comment.trim();
+        } else {
+            clean_line = line.trim();
+        }
+
+        if clean_line.chars().nth(0) == Some('(') {
+            let label = &clean_line[1..clean_line.len() - 1];
+            let prev_label = labels.insert(label, inst_count);
+
+            assert_eq!(prev_label, None, "Duplicate labels: {}", label); // TODO: Propogate error upwards
+            label_count += 1;
+        } else if clean_line.len() != 0 {
+            instructions.push(clean_line.to_owned());
+            inst_count += 1;
+        }
+    }
+
+    (instructions, labels, label_count)
+}
+
+fn translate_line<'a>(
+    line: &'a str,
+    symbols: &mut HashMap<&'a str, u32>,
+    label_count: u32,
+) -> String {
     let first_char = line.chars().nth(0);
 
     return match first_char {
-        None => "".to_owned(),
-        Some('(') => "SYMBOL".to_owned(),
-        Some('@') => translate_a(line),
+        Some('@') => translate_a(line, symbols, label_count),
         _ => translate_c(line),
     };
 }
 
-fn translate_a(line: &str) -> String {
+fn translate_a<'a>(
+    line: &'a str,
+    symbols: &mut HashMap<&'a str, u32>,
+    symbol_count: u32,
+) -> String {
     let symbol = &line[1..];
 
-    let result = symbol
-        .parse::<u16>()
-        .and_then(|x| Ok(format!("{:016b}", x)))
-        .expect(&format!("Failed to parse to A-INST {}", symbol));
+    if let Ok(address) = symbol.parse::<u16>() {
+        return format!("{:016b}", address);
+    } else if let Some(address) = symbols.get(symbol) {
+        return format!("{:016b}", address);
+    } else {
+        let address = next_free_mem_addr(symbols, symbol_count);
+        symbols.insert(symbol, address);
 
-    let lead_bit = result.chars().nth(0).unwrap();
-    assert_eq!(lead_bit, '0', "{} lead bit was not zero", lead_bit);
+        return format!("{:016b}", address);
+    }
+}
 
-    return result;
+fn next_free_mem_addr(symbols: &HashMap<&str, u32>, label_count: u32) -> u32 {
+    let address = symbols.len() as u32;
+    let address = address + USER_MEM_START;
+    let address = address - PREDEFINED_SYMBOLS.len() as u32;
+    let address = address - label_count;
+
+    address
 }
 
 fn translate_c(line: &str) -> String {
