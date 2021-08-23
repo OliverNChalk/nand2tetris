@@ -7,15 +7,22 @@ fn main() {
     let args: Vec<String> = env::args().collect();
 
     if let Some(first_arg) = args.get(1) {
+        let (file_name, _) = first_arg.split_once('.').unwrap();
         let result = read_lines(&first_arg).unwrap_or_else(|e| {
             eprintln!("Could not read file ({}): {}", first_arg, e);
             process::exit(1);
         });
-        let result = hack_assembler::clean_whitespace(result);
 
-        for line in result.iter() {
-            println!("{}", hack_assembler::translate_line(line));
-        }
+        let result = hack_assembler::clean_whitespace(result);
+        let result: Vec<String> = result
+            .iter()
+            .map(|x| hack_assembler::translate_line(x))
+            .collect();
+        let flat_result = result.join("\n") + "\n";
+
+        fs::write(format!("{}.hack", file_name), flat_result).unwrap_or_else(|e| {
+            eprintln!("Could not write file {}.hack: {}", file_name, e);
+        });
     }
 }
 
