@@ -68,11 +68,11 @@ fn handle_file(file_path: &str) -> Result<(), String> {
 fn main() -> Result<(), String> {
     // TODO: parse command line args
     let file_names = vec![
+        "/home/oliver/ghq/github.com/OliverNChalk/nand2tetris/projects/07/StackArithmetic/SimpleAdd/SimpleAdd.vm",
+        "/home/oliver/ghq/github.com/OliverNChalk/nand2tetris/projects/07/StackArithmetic/StackTest/StackTest.vm",
         "/home/oliver/ghq/github.com/OliverNChalk/nand2tetris/projects/07/MemoryAccess/BasicTest/BasicTest.vm",
         "/home/oliver/ghq/github.com/OliverNChalk/nand2tetris/projects/07/MemoryAccess/StaticTest/StaticTest.vm",
         "/home/oliver/ghq/github.com/OliverNChalk/nand2tetris/projects/07/MemoryAccess/PointerTest/PointerTest.vm",
-        "/home/oliver/ghq/github.com/OliverNChalk/nand2tetris/projects/07/StackArithmetic/SimpleAdd/SimpleAdd.vm",
-        "/home/oliver/ghq/github.com/OliverNChalk/nand2tetris/projects/07/StackArithmetic/StackTest/StackTest.vm",
     ];
 
     // for each file, load
