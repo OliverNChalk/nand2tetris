@@ -1,4 +1,4 @@
-use std::{env, fs, io};
+use std::{env, fs, io, path};
 
 use vm_translator::{code_gen, parser, vm};
 
@@ -73,20 +73,18 @@ fn write_result(file_path: &str, result: Vec<String>) -> io::Result<()> {
 
 fn main() -> Result<(), String> {
     let args: Vec<String> = env::args().collect();
-    for arg in &args {
-        println!("{}", arg);
-    }
     assert_eq!(args.len(), 2, "invalid number of arguments");
 
-    let target = args.get(1).unwrap();
-    let result = handle_file(target)?;
+    let argument = args.get(1).unwrap();
+
+    let source = path::Path::new(argument).canonicalize().map_err(|e| e.to_string())?;
+    let result = handle_file(source.to_str().unwrap())?;
 
     // extract dir
-    let dir_delim = target.rfind('/').unwrap(); // todo: find equivalent of '?' for Option
-    let (target_dir, file_name) = target.split_at(dir_delim);
-    let file_name = file_name.split_once('.').unwrap().0;
+    let file_stem = source.file_stem().unwrap().to_str().unwrap();
+    let file_dir = source.ancestors().nth(1).unwrap().to_str().unwrap();
 
-    let result_file = format!("{}{}.asm", target_dir, file_name);
+    let result_file = format!("{}/{}.asm", file_dir, file_stem);
 
     println!("{}", result_file);
 
