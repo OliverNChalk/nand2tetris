@@ -23,11 +23,13 @@ fn parse_region(region: &str) -> Result<vm::Region, String> {
     match region {
 
         "constant" => Ok(vm::Region::Constant),
+        "pointer" => Ok(vm::Region::Pointer),
+        "temp" => Ok(vm::Region::Temp),
+        "static" => Ok(vm::Region::Temp),
         "local" => Ok(vm::Region::Local),
         "argument" => Ok(vm::Region::Argument),
         "this" => Ok(vm::Region::This),
         "that" => Ok(vm::Region::That),
-        "temp" => Ok(vm::Region::Temp),
         _ => Err(format!("invalid region: {}", region)),
     }
 }

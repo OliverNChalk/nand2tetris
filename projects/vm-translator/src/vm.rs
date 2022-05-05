@@ -28,22 +28,26 @@ pub enum RegionType {
 #[derive(Debug)]
 pub enum Region {
     Constant,
+    Pointer,
+    Temp,
+    Static,
     Local,
     Argument,
     This,
     That,
-    Temp,
 }
 
 impl Region {
     pub fn offset(self) -> RegionType {
         match self {
             Region::Constant => RegionType::Constant,
+            Region::Pointer => RegionType::Fixed(3),
+            Region::Temp => RegionType::Fixed(5),
+            Region::Static => RegionType::Fixed(16),
             Region::Local => RegionType::Dynamic(1),
             Region::Argument => RegionType::Dynamic(2),
             Region::This => RegionType::Dynamic(3),
             Region::That => RegionType::Dynamic(4),
-            Region::Temp => RegionType::Fixed(5),
         }
     }
 }
@@ -160,7 +164,6 @@ fn compare(operator: VmComparison, label_count: &mut Counter) -> Vec<String> {
 
 // todo: only implements constant right now
 pub fn push(region: Region, index: u32) -> Vec<String> {
-    println!("{:?}::{}", region, index);
     match region.offset() {
         RegionType::Constant => push_constant(index),
         RegionType::Dynamic(offset) => push_dynamic(offset, index),
@@ -218,7 +221,6 @@ fn push_dynamic(offset: u32, index: u32) -> Vec<String> {
 }
 
 pub fn pop(region: Region, index: u32) -> Vec<String> {
-    println!("{:?}::{}", region, index);
     match region.offset() {
         RegionType::Constant => panic!("can't pop to constant"),
         RegionType::Dynamic(offset) => pop_dynamic(offset, index),
