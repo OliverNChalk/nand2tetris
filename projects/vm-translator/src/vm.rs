@@ -18,6 +18,36 @@ pub enum OpCode {
     Not,
 }
 
+#[derive(Debug)]
+pub enum RegionType {
+    Constant,
+    Fixed(u32),
+    Dynamic(u32),
+}
+
+#[derive(Debug)]
+pub enum Region {
+    Constant,
+    Local,
+    Argument,
+    This,
+    That,
+    Temp,
+}
+
+impl Region {
+    pub fn offset(self) -> RegionType {
+        match self {
+            Region::Constant => RegionType::Constant,
+            Region::Local => RegionType::Dynamic(1),
+            Region::Argument => RegionType::Dynamic(2),
+            Region::This => RegionType::Dynamic(3),
+            Region::That => RegionType::Dynamic(4),
+            Region::Temp => RegionType::Fixed(5),
+        }
+    }
+}
+
 pub struct Counter {
     pub count: u32,
 }
@@ -129,32 +159,122 @@ fn compare(operator: VmComparison, label_count: &mut Counter) -> Vec<String> {
 }
 
 // todo: only implements constant right now
-pub fn push(args: Vec<&str>) -> Result<Vec<String>, String> {
-    if args.len() != 2 {
-        return Err(String::from("invalid push arguments"));
+pub fn push(region: Region, index: u32) -> Vec<String> {
+    println!("{:?}::{}", region, index);
+    match region.offset() {
+        RegionType::Constant => push_constant(index),
+        RegionType::Dynamic(offset) => push_dynamic(offset, index),
+        RegionType::Fixed(offset) => push_fixed(offset, index),
     }
+}
 
-    let region = args.get(0).ok_or(String::from("push: missing region"))?;
-    assert_eq!(*region, "constant");
-
-    let value = args.get(1).ok_or(String::from("push: missing value"))?;
-
+fn push_constant(value: u32) -> Vec<String> {
     let mut result = Vec::with_capacity(1);
-    // store value in D
+    // inject constant via A-instruction
     result.push(format!("@{}", value));
     result.push(format!("D=A"));
-    // push D to the top of the stack
+    // push onto stack
     result.append(&mut write_head());
     // point stack at next free slot
     result.append(&mut increment_stack());
 
-    Ok(result)
+    result
 }
 
-pub fn add() -> Result<Vec<String>, String> {
-    // 1. pops the top 2 stack elements
-    // 2. adds the popped elements
-    // 3. pushes the result onto the stack
+fn push_fixed(offset: u32, index: u32) -> Vec<String> {
+    let address = offset + index;
+
+    let mut result = Vec::with_capacity(1);
+
+    // read from memory
+    result.push(format!("@{}", address));
+    result.push(format!("D=M"));
+    // push onto stack
+    result.append(&mut write_head());
+    // point stack at next free slot
+    result.append(&mut increment_stack());
+
+    result
+}
+
+fn push_dynamic(offset: u32, index: u32) -> Vec<String> {
+    let mut result = Vec::with_capacity(1);
+
+    // load offset
+    result.push(format!("@{}", offset));
+    result.push(format!("D=M"));
+    // add index to offset
+    result.push(format!("@{}", index));
+    result.push(format!("D=D+A"));
+    // read from memory
+    result.push(format!("A=D"));
+    result.push(format!("D=M"));
+    // push onto stack
+    result.append(&mut write_head());
+    // point stack at next free slot
+    result.append(&mut increment_stack());
+
+    result
+}
+
+pub fn pop(region: Region, index: u32) -> Vec<String> {
+    println!("{:?}::{}", region, index);
+    match region.offset() {
+        RegionType::Constant => panic!("can't pop to constant"),
+        RegionType::Dynamic(offset) => pop_dynamic(offset, index),
+        RegionType::Fixed(offset) => pop_fixed(offset, index),
+    }
+}
+
+fn pop_dynamic(offset: u32, index: u32) -> Vec<String> {
+    let mut result = Vec::with_capacity(1);
+
+    // point at first data
+    result.append(&mut decrement_stack());
+    // read HEAD
+    result.append(&mut read_head());
+    // store HEAD in R13
+    result.push(format!("@R13"));
+    result.push(format!("M=D"));
+
+    // load offset
+    result.push(format!("@{}", offset));
+    result.push(format!("D=M"));
+    // add index to offset
+    result.push(format!("@{}", index));
+    result.push(format!("D=D+A"));
+    // store address in R14
+    result.push(format!("@R14"));
+    result.push(format!("M=D"));
+    // load HEAD into D
+    result.push(format!("@R13"));
+    result.push(format!("D=M"));
+    // load address into A
+    result.push(format!("@R14"));
+    result.push(format!("A=M"));
+    // write D to address
+    result.push(format!("M=D"));
+
+    result
+}
+
+fn pop_fixed(offset: u32, index: u32) -> Vec<String> {
+    let address = offset + index;
+
+    let mut result = Vec::with_capacity(1);
+
+    // point at first variable
+    result.append(&mut decrement_stack());
+    // read from HEAD
+    result.append(&mut read_head());
+    // write to memory
+    result.push(format!("@{}", address));
+    result.push(format!("M=D"));
+
+    result
+}
+
+pub fn add() -> Vec<String> {
     let mut result = Vec::with_capacity(1);
 
     // point at the first populated element
@@ -171,13 +291,10 @@ pub fn add() -> Result<Vec<String>, String> {
     // point stack at next free slot
     result.append(&mut increment_stack());
 
-    Ok(result)
+    result
 }
 
-pub fn sub() -> Result<Vec<String>, String> {
-    // 1. pops the top 2 stack elements
-    // 2. subs the popped elements
-    // 3. pushes the result onto the stack
+pub fn sub() -> Vec<String> {
     let mut result = Vec::with_capacity(1);
 
     // point at the first populated element
@@ -194,10 +311,10 @@ pub fn sub() -> Result<Vec<String>, String> {
     // point at next free slot
     result.append(&mut increment_stack());
 
-    Ok(result)
+    result
 }
 
-pub fn neg() -> Result<Vec<String>, String> {
+pub fn neg() -> Vec<String> {
     let mut result = Vec::with_capacity(1);
 
     // point at the first populated element
@@ -210,30 +327,30 @@ pub fn neg() -> Result<Vec<String>, String> {
     // point at next free slot
     result.append(&mut increment_stack());
 
-    Ok(result)
+    result
 }
 
-pub fn eq(label_count: &mut Counter) -> Result<Vec<String>, String> {
-    Ok(compare(VmComparison::JEQ, label_count))
+pub fn eq(label_count: &mut Counter) -> Vec<String> {
+    compare(VmComparison::JEQ, label_count)
 }
 
-pub fn lt(label_count: &mut Counter) -> Result<Vec<String>, String> {
-    Ok(compare(VmComparison::JLT, label_count))
+pub fn lt(label_count: &mut Counter) -> Vec<String> {
+    compare(VmComparison::JLT, label_count)
 }
 
-pub fn le(label_count: &mut Counter) -> Result<Vec<String>, String> {
-    Ok(compare(VmComparison::JLE, label_count))
+pub fn le(label_count: &mut Counter) -> Vec<String> {
+    compare(VmComparison::JLE, label_count)
 }
 
-pub fn gt(label_count: &mut Counter) -> Result<Vec<String>, String> {
-    Ok(compare(VmComparison::JGT, label_count))
+pub fn gt(label_count: &mut Counter) -> Vec<String> {
+    compare(VmComparison::JGT, label_count)
 }
 
-pub fn ge(label_count: &mut Counter) -> Result<Vec<String>, String> {
-    Ok(compare(VmComparison::JGE, label_count))
+pub fn ge(label_count: &mut Counter) -> Vec<String> {
+    compare(VmComparison::JGE, label_count)
 }
 
-pub fn and() -> Result<Vec<String>, String> {
+pub fn and() -> Vec<String> {
     let mut result = Vec::with_capacity(1);
 
     // point at the first arg
@@ -250,10 +367,10 @@ pub fn and() -> Result<Vec<String>, String> {
     // point at next free slot
     result.append(&mut increment_stack());
 
-    Ok(result)
+    result
 }
 
-pub fn or() -> Result<Vec<String>, String> {
+pub fn or() -> Vec<String> {
     let mut result = Vec::with_capacity(1);
 
     // point at the first populated element
@@ -270,10 +387,10 @@ pub fn or() -> Result<Vec<String>, String> {
     // point at next free slot
     result.append(&mut increment_stack());
 
-    Ok(result)
+    result
 }
 
-pub fn not() -> Result<Vec<String>, String> {
+pub fn not() -> Vec<String> {
     let mut result = Vec::with_capacity(1);
 
     // point at the first populated element
@@ -286,5 +403,5 @@ pub fn not() -> Result<Vec<String>, String> {
     // point at next free slot
     result.append(&mut increment_stack());
 
-    Ok(result)
+    result
 }

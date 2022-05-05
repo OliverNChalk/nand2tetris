@@ -19,6 +19,19 @@ fn parse_opcode(opcode: &str) -> Result<vm::OpCode, String> {
     }
 }
 
+fn parse_region(region: &str) -> Result<vm::Region, String> {
+    match region {
+
+        "constant" => Ok(vm::Region::Constant),
+        "local" => Ok(vm::Region::Local),
+        "argument" => Ok(vm::Region::Argument),
+        "this" => Ok(vm::Region::This),
+        "that" => Ok(vm::Region::That),
+        "temp" => Ok(vm::Region::Temp),
+        _ => Err(format!("invalid region: {}", region)),
+    }
+}
+
 pub fn generate(command: &str, label_count: &mut vm::Counter) -> Result<Vec<String>, String> {
     let mut args = command.split(' ');
     let first_arg = args.next().ok_or(String::from("missing opcode arg"))?;
@@ -27,51 +40,61 @@ pub fn generate(command: &str, label_count: &mut vm::Counter) -> Result<Vec<Stri
     let remaining_args: Vec<&str> = args.collect();
 
     match opcode {
-        vm::OpCode::Push => vm::push(remaining_args),
-        vm::OpCode::Pop => Ok(Vec::with_capacity(1)),
+        vm::OpCode::Push => {
+            let region = parse_region(remaining_args.get(0).unwrap())?;
+            let index: u32 = remaining_args.get(1).unwrap().parse().unwrap();
+
+            Ok(vm::push(region, index))
+        },
+        vm::OpCode::Pop => {
+            let region = parse_region(remaining_args.get(0).unwrap())?;
+            let index: u32 = remaining_args.get(1).unwrap().parse().unwrap();
+
+            Ok(vm::pop(region, index))
+        },
         vm::OpCode::Add => {
             assert!(remaining_args.len() == 0);
-            vm::add()
+            Ok(vm::add())
         },
         vm::OpCode::Sub => {
             assert!(remaining_args.len() == 0);
-            vm::sub()
+            Ok(vm::sub())
         },
         vm::OpCode::Neg => {
             assert!(remaining_args.len() == 0);
-            vm::neg()
+            Ok(vm::neg())
         },
         vm::OpCode::Eq => {
             assert!(remaining_args.len() == 0);
-            vm::eq(label_count)
+            Ok(vm::eq(label_count))
         },
         vm::OpCode::Lt => {
             assert!(remaining_args.len() == 0);
-            vm::lt(label_count)
+            Ok(vm::lt(label_count))
         },
         vm::OpCode::Le => {
             assert!(remaining_args.len() == 0);
-            vm::le(label_count)
+            Ok(vm::le(label_count))
         },
         vm::OpCode::Gt => {
             assert!(remaining_args.len() == 0);
-            vm::gt(label_count)
+            Ok(vm::gt(label_count))
         },
         vm::OpCode::Ge => {
             assert!(remaining_args.len() == 0);
-            vm::ge(label_count)
+            Ok(vm::ge(label_count))
         },
         vm::OpCode::And => {
             assert!(remaining_args.len() == 0);
-            vm::and()
+            Ok(vm::and())
         },
         vm::OpCode::Or => {
             assert!(remaining_args.len() == 0);
-            vm::or()
+            Ok(vm::or())
         },
         vm::OpCode::Not => {
             assert!(remaining_args.len() == 0);
-            vm::not()
+            Ok(vm::not())
         },
     }
 }
