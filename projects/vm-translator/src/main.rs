@@ -2,33 +2,6 @@ use std::{env, fs, io, path};
 
 use vm_translator::{code_gen, parser, vm};
 
-// program overview
-//
-// == parser
-// 1. load the .vm file
-// 2. parse each line
-//   a. ignore whitespace (comments indicated by "//")
-//   b. validate & then parse line to target command
-//   c. return Vector<Command> for the next step
-//
-// == code_gen
-// 1. receive Vector<Command>
-// 2. convert each command into ASM block
-//   a. ASM block prefixed with VM command that generated it. format to be
-//      `L{line_number}: {vm_command}`
-//   b. write however many ASM lines needed
-//   c. if there are more ASM blocks to come, append a newline to break up
-//      blocks
-//
-// == main
-// arguments:
-//  - <file...> :: one or more files to convert into asm
-//
-// 1. will load `filename.vm`
-// 2. will parse target file to commands using `parser`
-// 3. will convert commands to ASM using `code_gen`
-// 4. will save the result in `filename.asm`
-
 fn handle_file(file_path: &str) -> Result<Vec<String>, String> {
     let file = fs::read_to_string(file_path)
         .map_err(|x| format!("failed to read '{}' with error: {}", file_path, x))?;
@@ -44,17 +17,15 @@ fn handle_file(file_path: &str) -> Result<Vec<String>, String> {
 
         match hack_assembly {
             Ok(mut hack_assembly) => {
-                result.push(format!("\n// L{}: {}", line_number, command));
+                result.push(format!("// L{}: {}", line_number, command));
                 result.append(&mut hack_assembly);
+                result.push("".to_owned());
             }
             Err(err) => {
                 errors.push(err);
             }
         }
     }
-
-    // newline at end of file
-    result.push(format!("\n"));
 
     if errors.len() == 0 {
         Ok(result)
