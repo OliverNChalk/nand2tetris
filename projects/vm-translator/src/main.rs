@@ -1,6 +1,6 @@
-use std::{fs, io};
+use std::{env, fs, io};
 
-use vm_translator::{code_gen, parser};
+use vm_translator::{code_gen, parser, vm};
 
 // program overview
 //
@@ -37,8 +37,10 @@ fn handle_file(file_path: &str) -> Result<Vec<String>, String> {
     let mut result = vec![];
     let mut errors = vec![];
 
+    let mut label_count = vm::Counter::new();
+
     for (line_number, command) in jack_file.commands() {
-        let hack_assembly = code_gen::generate(command);
+        let hack_assembly = code_gen::generate(command, &mut label_count);
 
         match hack_assembly {
             Ok(mut hack_assembly) => {
@@ -70,16 +72,13 @@ fn write_result(file_path: &str, result: Vec<String>) -> io::Result<()> {
 }
 
 fn main() -> Result<(), String> {
-    // TODO: parse command line args
-    let file_names = vec![
-        // "/home/oliver/ghq/github.com/OliverNChalk/nand2tetris/projects/07/StackArithmetic/SimpleAdd/SimpleAdd.vm",
-        "/home/oliver/ghq/github.com/OliverNChalk/nand2tetris/projects/07/StackArithmetic/StackTest/StackTest.vm",
-        "/home/oliver/ghq/github.com/OliverNChalk/nand2tetris/projects/07/MemoryAccess/BasicTest/BasicTest.vm",
-        "/home/oliver/ghq/github.com/OliverNChalk/nand2tetris/projects/07/MemoryAccess/StaticTest/StaticTest.vm",
-        "/home/oliver/ghq/github.com/OliverNChalk/nand2tetris/projects/07/MemoryAccess/PointerTest/PointerTest.vm",
-    ];
+    let args: Vec<String> = env::args().collect();
+    for arg in &args {
+        println!("{}", arg);
+    }
+    assert_eq!(args.len(), 2, "invalid number of arguments");
 
-    let target = *file_names.get(0).unwrap();
+    let target = args.get(1).unwrap();
     let result = handle_file(target)?;
 
     // extract dir

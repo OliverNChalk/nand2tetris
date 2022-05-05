@@ -19,7 +19,7 @@ fn parse_opcode(opcode: &str) -> Result<vm::OpCode, String> {
     }
 }
 
-pub fn generate(command: &str) -> Result<Vec<String>, String> {
+pub fn generate(command: &str, label_count: &mut vm::Counter) -> Result<Vec<String>, String> {
     let mut args = command.split(' ');
     let first_arg = args.next().ok_or(String::from("missing opcode arg"))?;
     let opcode = parse_opcode(first_arg)?;
@@ -43,23 +43,23 @@ pub fn generate(command: &str) -> Result<Vec<String>, String> {
         },
         vm::OpCode::Eq => {
             assert!(remaining_args.len() == 0);
-            vm::eq()
+            vm::eq(label_count)
         },
         vm::OpCode::Lt => {
             assert!(remaining_args.len() == 0);
-            vm::lt()
+            vm::lt(label_count)
         },
         vm::OpCode::Le => {
             assert!(remaining_args.len() == 0);
-            vm::le()
+            vm::le(label_count)
         },
         vm::OpCode::Gt => {
             assert!(remaining_args.len() == 0);
-            vm::gt()
+            vm::gt(label_count)
         },
         vm::OpCode::Ge => {
             assert!(remaining_args.len() == 0);
-            vm::ge()
+            vm::ge(label_count)
         },
         vm::OpCode::And => {
             assert!(remaining_args.len() == 0);

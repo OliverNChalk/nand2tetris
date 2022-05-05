@@ -18,6 +18,22 @@ pub enum OpCode {
     Not,
 }
 
+pub struct Counter {
+    pub count: u32,
+}
+
+impl Counter {
+    pub fn new() -> Counter {
+        Counter{ count: 0 }
+    }
+
+    pub fn inc(&mut self) -> u32 {
+        self.count += 1;
+
+        self.count
+    }
+}
+
 // hack helpers
 fn increment_stack() -> Vec<String> {
     vec![
@@ -33,22 +49,9 @@ fn decrement_stack() -> Vec<String> {
     ]
 }
 
-fn write_d() -> Vec<String> {
-    vec![
-        format!("A=M"),
-        format!("D=M"),
-    ]
-}
-
-fn add_d() -> Vec<String> {
-    vec![
-        format!("A=M"),
-        format!("D=D+M"),
-    ]
-}
-
 fn write_head() -> Vec<String> {
     vec![
+        format!("@0"),
         format!("A=M"),
         format!("M=D"),
     ]
@@ -57,7 +60,14 @@ fn write_head() -> Vec<String> {
 fn read_head() -> Vec<String> {
     vec![
         format!("A=M"),
-        format!("M=D"),
+        format!("D=M"),
+    ]
+}
+
+fn read_negated_head() -> Vec<String> {
+    vec![
+        format!("A=M"),
+        format!("D=-M"),
     ]
 }
 
@@ -83,32 +93,34 @@ impl ToString for VmComparison {
     }
 }
 
-fn compare(operator: VmComparison) -> Vec<String> {
+fn compare(operator: VmComparison, label_count: &mut Counter) -> Vec<String> {
     let mut result = Vec::with_capacity(1);
+
+    let true_branch = format!("LOW_LEVEL_LABEL{}", label_count.inc());
+    let continue_branch = format!("LOW_LEVEL_LABEL{}", label_count.inc());
 
     // point at the first populated element
     result.append(&mut decrement_stack());
-    // set D to HEAD
-    result.append(&mut read_head());
+    // set D to -HEAD
+    result.append(&mut read_negated_head());
     // point at the next element
     result.append(&mut decrement_stack());
     // get diff of 1st and 2nd element
     result.push(format!("A=M"));
-    result.push(format!("D=D-M"));
+    result.push(format!("D=D+M"));
     // jump false if
-    result.push(format!("@TRUE_1"));
+    result.push(format!("@{}", true_branch));
     result.push(format!("D;{}", operator.to_string()));
     // DEFAULT: IS FALSE
-    result.push(format!("D=-1"));
-    result.push(format!("@CONTINUE_1"));
-    result.push(format!("JMP"));
-    // JUMP: IS TRUE
-    result.push(format!("(TRUE_1)"));
     result.push(format!("D=0"));
+    result.push(format!("@{}", continue_branch));
+    result.push(format!("0;JMP"));
+    // JUMP: IS TRUE
+    result.push(format!("({})", true_branch));
+    result.push(format!("D=-1"));
     // JUMP: CONTINUE
-    result.push(format!("(CONTINUE_1)"));
+    result.push(format!("({})", continue_branch));
     // set HEAD to D
-    result.push(format!("@0"));
     result.append(&mut write_head());
     // point at next free slot
     result.append(&mut increment_stack());
@@ -132,8 +144,7 @@ pub fn push(args: Vec<&str>) -> Result<Vec<String>, String> {
     result.push(format!("@{}", value));
     result.push(format!("D=A"));
     // push D to the top of the stack
-    result.push(format!("@0"));
-    result.append(&mut read_head());
+    result.append(&mut write_head());
     // point stack at next free slot
     result.append(&mut increment_stack());
 
@@ -149,13 +160,13 @@ pub fn add() -> Result<Vec<String>, String> {
     // point at the first populated element
     result.append(&mut decrement_stack());
     // load the first value from the stack
-    result.append(&mut write_d());
+    result.append(&mut read_head());
     // decrement the stack pointer to read next value
     result.append(&mut decrement_stack());
     // add the next value to D register
-    result.append(&mut add_d());
+    result.push(format!("A=M"));
+    result.push(format!("D=D+M"));
     // overwrite the previous value with D
-    result.push(format!("@0"));
     result.append(&mut write_head());
     // point stack at next free slot
     result.append(&mut increment_stack());
@@ -172,13 +183,13 @@ pub fn sub() -> Result<Vec<String>, String> {
     // point at the first populated element
     result.append(&mut decrement_stack());
     // set D to HEAD
-    result.append(&mut write_d());
+    result.append(&mut read_negated_head());
     // point at the next populated element
     result.append(&mut decrement_stack());
     // add HEAD to D
-    result.append(&mut add_d());
+    result.push(format!("A=M"));
+    result.push(format!("D=D+M"));
     // set HEAD to D
-    result.push(format!("@0"));
     result.append(&mut write_head());
     // point at next free slot
     result.append(&mut increment_stack());
@@ -195,7 +206,6 @@ pub fn neg() -> Result<Vec<String>, String> {
     result.push(format!("A=M"));
     result.push(format!("D=-M"));
     // set HEAD to D
-    result.push(format!("@0"));
     result.append(&mut write_head());
     // point at next free slot
     result.append(&mut increment_stack());
@@ -203,40 +213,39 @@ pub fn neg() -> Result<Vec<String>, String> {
     Ok(result)
 }
 
-pub fn eq() -> Result<Vec<String>, String> {
-    Ok(compare(VmComparison::JEQ))
+pub fn eq(label_count: &mut Counter) -> Result<Vec<String>, String> {
+    Ok(compare(VmComparison::JEQ, label_count))
 }
 
-pub fn lt() -> Result<Vec<String>, String> {
-    Ok(compare(VmComparison::JLT))
+pub fn lt(label_count: &mut Counter) -> Result<Vec<String>, String> {
+    Ok(compare(VmComparison::JLT, label_count))
 }
 
-pub fn le() -> Result<Vec<String>, String> {
-    Ok(compare(VmComparison::JLE))
+pub fn le(label_count: &mut Counter) -> Result<Vec<String>, String> {
+    Ok(compare(VmComparison::JLE, label_count))
 }
 
-pub fn gt() -> Result<Vec<String>, String> {
-    Ok(compare(VmComparison::JGT))
+pub fn gt(label_count: &mut Counter) -> Result<Vec<String>, String> {
+    Ok(compare(VmComparison::JGT, label_count))
 }
 
-pub fn ge() -> Result<Vec<String>, String> {
-    Ok(compare(VmComparison::JGE))
+pub fn ge(label_count: &mut Counter) -> Result<Vec<String>, String> {
+    Ok(compare(VmComparison::JGE, label_count))
 }
 
 pub fn and() -> Result<Vec<String>, String> {
     let mut result = Vec::with_capacity(1);
 
-    // point at the first populated element
+    // point at the first arg
     result.append(&mut decrement_stack());
     // set D to HEAD
-    result.push(format!("A=M"));
-    result.push(format!("D=M"));
-    // point at the next element
+    result.append(&mut read_head());
+    // point at the second arg
     result.append(&mut decrement_stack());
     // set D to D&M
+    result.push(format!("A=M"));
     result.push(format!("D=D&M"));
     // set HEAD to D
-    result.push(format!("@0"));
     result.append(&mut write_head());
     // point at next free slot
     result.append(&mut increment_stack());
@@ -250,14 +259,13 @@ pub fn or() -> Result<Vec<String>, String> {
     // point at the first populated element
     result.append(&mut decrement_stack());
     // set D to HEAD
-    result.push(format!("A=M"));
-    result.push(format!("D=M"));
+    result.append(&mut read_head());
     // point at the next element
     result.append(&mut decrement_stack());
     // set D to D&M
+    result.push(format!("A=M"));
     result.push(format!("D=D|M"));
     // set HEAD to D
-    result.push(format!("@0"));
     result.append(&mut write_head());
     // point at next free slot
     result.append(&mut increment_stack());
@@ -274,7 +282,6 @@ pub fn not() -> Result<Vec<String>, String> {
     result.push(format!("A=M"));
     result.push(format!("D=!M"));
     // set HEAD to D
-    result.push(format!("@0"));
     result.append(&mut write_head());
     // point at next free slot
     result.append(&mut increment_stack());
