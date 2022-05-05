@@ -1,4 +1,4 @@
-use std::fs;
+use std::{fs, io};
 
 use vm_translator::{code_gen, parser};
 
@@ -29,7 +29,7 @@ use vm_translator::{code_gen, parser};
 // 3. will convert commands to ASM using `code_gen`
 // 4. will save the result in `filename.asm`
 
-fn handle_file(file_path: &str) -> Result<(), String> {
+fn handle_file(file_path: &str) -> Result<Vec<String>, String> {
     let file = fs::read_to_string(file_path)
         .map_err(|x| format!("failed to read '{}' with error: {}", file_path, x))?;
 
@@ -41,12 +41,9 @@ fn handle_file(file_path: &str) -> Result<(), String> {
         let hack_assembly = code_gen::generate(command);
 
         match hack_assembly {
-            Ok(hack_assembly) => {
-                result.push(format!("\nL{}: {}", line_number, command));
-
-                for instruction in hack_assembly {
-                    result.push(format!("{}", instruction));
-                }
+            Ok(mut hack_assembly) => {
+                result.push(format!("\n// L{}: {}", line_number, command));
+                result.append(&mut hack_assembly);
             }
             Err(err) => {
                 errors.push(err);
@@ -54,10 +51,11 @@ fn handle_file(file_path: &str) -> Result<(), String> {
         }
     }
 
-    if errors.len() == 0 {
-        result.iter().for_each(|line| println!("{}", line));
+    // newline at end of file
+    result.push(format!("\n"));
 
-        Ok(())
+    if errors.len() == 0 {
+        Ok(result)
     } else {
         errors.iter().for_each(|e| println!("{}", e));
 
@@ -65,18 +63,33 @@ fn handle_file(file_path: &str) -> Result<(), String> {
     }
 }
 
+fn write_result(file_path: &str, result: Vec<String>) -> io::Result<()> {
+    let content = result.join("\n");
+
+    fs::write(file_path, content)
+}
+
 fn main() -> Result<(), String> {
     // TODO: parse command line args
     let file_names = vec![
-        "/home/oliver/ghq/github.com/OliverNChalk/nand2tetris/projects/07/StackArithmetic/SimpleAdd/SimpleAdd.vm",
+        // "/home/oliver/ghq/github.com/OliverNChalk/nand2tetris/projects/07/StackArithmetic/SimpleAdd/SimpleAdd.vm",
         "/home/oliver/ghq/github.com/OliverNChalk/nand2tetris/projects/07/StackArithmetic/StackTest/StackTest.vm",
         "/home/oliver/ghq/github.com/OliverNChalk/nand2tetris/projects/07/MemoryAccess/BasicTest/BasicTest.vm",
         "/home/oliver/ghq/github.com/OliverNChalk/nand2tetris/projects/07/MemoryAccess/StaticTest/StaticTest.vm",
         "/home/oliver/ghq/github.com/OliverNChalk/nand2tetris/projects/07/MemoryAccess/PointerTest/PointerTest.vm",
     ];
 
-    // for each file, load
-    let first_file = *file_names.get(0).unwrap();
+    let target = *file_names.get(0).unwrap();
+    let result = handle_file(target)?;
 
-    handle_file(first_file)
+    // extract dir
+    let dir_delim = target.rfind('/').unwrap(); // todo: find equivalent of '?' for Option
+    let (target_dir, file_name) = target.split_at(dir_delim);
+    let file_name = file_name.split_once('.').unwrap().0;
+
+    let result_file = format!("{}{}.asm", target_dir, file_name);
+
+    println!("{}", result_file);
+
+    write_result(&result_file, result).map_err(|e| e.to_string())
 }

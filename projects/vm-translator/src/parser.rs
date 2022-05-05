@@ -6,10 +6,10 @@ type JackLine<'a> = (usize, &'a str);
 
 impl<'a> JackFile<'a> {
     pub fn new(file: &'a String) -> JackFile<'a> {
-        let source = file
+        let source: Vec<(usize, &str)> = file
             .lines()
-            .map(|l| l.trim())
-            .filter(|l| !(l.starts_with("//") || l.len() == 0))
+            .map(|line| line.trim())
+            .filter(|line| !(line.starts_with("//") || line.len() == 0))
             .enumerate()
             .map(|(number, line)| (number + 1, line.trim()))
             .collect();
