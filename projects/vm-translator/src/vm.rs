@@ -162,12 +162,11 @@ fn compare(operator: VmComparison, label_count: &mut Counter) -> Vec<String> {
     result
 }
 
-// todo: only implements constant right now
 pub fn push(region: Region, index: u32) -> Vec<String> {
     match region.offset() {
         RegionType::Constant => push_constant(index),
-        RegionType::Dynamic(offset) => push_dynamic(offset, index),
         RegionType::Fixed(offset) => push_fixed(offset, index),
+        RegionType::Dynamic(offset) => push_dynamic(offset, index),
     }
 }
 
