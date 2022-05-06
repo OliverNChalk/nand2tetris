@@ -8,7 +8,6 @@ M=D
 M=M+1
 
 // L2: pop pointer 0
-@0
 M=M-1
 A=M
 D=M
@@ -25,7 +24,6 @@ M=D
 M=M+1
 
 // L4: pop pointer 1
-@0
 M=M-1
 A=M
 D=M
@@ -42,7 +40,6 @@ M=D
 M=M+1
 
 // L6: pop this 2
-@0
 M=M-1
 A=M
 D=M
@@ -70,7 +67,6 @@ M=D
 M=M+1
 
 // L8: pop that 6
-@0
 M=M-1
 A=M
 D=M
@@ -107,7 +103,6 @@ M=D
 M=M+1
 
 // L11: add
-@0
 M=M-1
 A=M
 D=M
@@ -135,7 +130,6 @@ M=D
 M=M+1
 
 // L13: sub
-@0
 M=M-1
 A=M
 D=-M
@@ -163,7 +157,6 @@ M=D
 M=M+1
 
 // L15: add
-@0
 M=M-1
 A=M
 D=M

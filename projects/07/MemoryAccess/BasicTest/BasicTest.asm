@@ -1,4 +1,3 @@
-
 // L1: push constant 10
 @10
 D=A
@@ -9,7 +8,6 @@ M=D
 M=M+1
 
 // L2: pop local 0
-@0
 M=M-1
 A=M
 D=M
@@ -46,7 +44,6 @@ M=D
 M=M+1
 
 // L5: pop argument 2
-@0
 M=M-1
 A=M
 D=M
@@ -54,7 +51,6 @@ D=M
 M=D
 @2
 D=M
-@2
 D=D+A
 @R14
 M=D
@@ -93,7 +89,6 @@ M=D
 M=M+1
 
 // L8: pop this 6
-@0
 M=M-1
 A=M
 D=M
@@ -130,7 +125,6 @@ M=D
 M=M+1
 
 // L11: pop that 5
-@0
 M=M-1
 A=M
 D=M
@@ -177,7 +171,6 @@ M=D
 M=M+1
 
 // L14: pop temp 6
-@0
 M=M-1
 A=M
 D=M
@@ -211,7 +204,6 @@ M=D
 M=M+1
 
 // L17: add
-@0
 M=M-1
 A=M
 D=M
@@ -239,7 +231,6 @@ M=D
 M=M+1
 
 // L19: sub
-@0
 M=M-1
 A=M
 D=-M
@@ -280,7 +271,6 @@ M=D
 M=M+1
 
 // L22: add
-@0
 M=M-1
 A=M
 D=M
@@ -295,7 +285,6 @@ M=D
 M=M+1
 
 // L23: sub
-@0
 M=M-1
 A=M
 D=-M
@@ -319,7 +308,6 @@ M=D
 M=M+1
 
 // L25: add
-@0
 M=M-1
 A=M
 D=M
@@ -332,4 +320,3 @@ A=M
 M=D
 @0
 M=M+1
-

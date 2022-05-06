@@ -1,4 +1,3 @@
-
 // L1: push constant 7
 @7
 D=A
@@ -18,7 +17,6 @@ M=D
 M=M+1
 
 // L3: add
-@0
 M=M-1
 A=M
 D=M
@@ -31,4 +29,3 @@ A=M
 M=D
 @0
 M=M+1
-
