@@ -45,12 +45,11 @@ fn process_raw_file(file: &Vec<String>) -> (Vec<String>, HashMap<&str, u32>, u32
     let mut label_count = 0;
 
     for line in file {
-        let clean_line;
-        if let Some((pre_comment, _)) = line.split_once("//") {
-            clean_line = pre_comment.trim();
+        let clean_line = if let Some((pre_comment, _)) = line.split_once("//") {
+            pre_comment.trim()
         } else {
-            clean_line = line.trim();
-        }
+            line.trim()
+        };
 
         if clean_line.chars().nth(0) == Some('(') {
             let label = &clean_line[1..clean_line.len() - 1];
