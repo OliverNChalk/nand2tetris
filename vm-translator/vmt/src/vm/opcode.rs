@@ -1,12 +1,15 @@
+use std::iter::once;
 use std::str::FromStr;
 
 use thiserror::Error;
 
+use shared::{assign, hack};
+
 #[derive(Debug)]
 pub(crate) enum OpCode {
     // Memory access
-    Push(super::Region, u32),
-    Pop(super::Region, u32),
+    Push(super::Region, u16),
+    Pop(super::Region, u16),
 
     // Arithmetic
     Add,
@@ -24,6 +27,49 @@ pub(crate) enum OpCode {
     And,
     Or,
     Not,
+}
+
+impl OpCode {
+    fn write_head() -> [hack::Instruction; 3] {
+        [hack::Instruction::A(0), assign!("A=M"), assign!("M=D")]
+    }
+
+    fn increment_stack() -> [hack::Instruction; 2] {
+        [hack::Instruction::A(0), assign!("M=M+1")]
+    }
+
+    pub(crate) fn bytecode(&self) -> Vec<hack::Instruction> {
+        match self {
+            OpCode::Push(region, index) => match region.offset() {
+                super::RegionType::Constant => [hack::Instruction::A(*index), assign!("D=A")]
+                    .into_iter()
+                    .chain(Self::write_head())
+                    .chain(Self::increment_stack())
+                    .collect(),
+                super::RegionType::Fixed(offset) => {
+                    [hack::Instruction::A(offset + index), assign!("D=M")]
+                        .into_iter()
+                        .chain(Self::write_head())
+                        .chain(Self::increment_stack())
+                        .collect()
+                }
+
+                super::RegionType::Dynamic(offset) => [
+                    hack::Instruction::A(offset),
+                    assign!("D=M"),
+                    hack::Instruction::A(*index),
+                    assign!("D=D+A"),
+                    assign!("A=D"),
+                    assign!("D=M"),
+                ]
+                .into_iter()
+                .chain(Self::write_head())
+                .chain(Self::increment_stack())
+                .collect(),
+            },
+            _ => todo!(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]

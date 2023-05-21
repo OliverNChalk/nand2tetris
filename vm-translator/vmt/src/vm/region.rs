@@ -5,8 +5,8 @@ use thiserror::Error;
 #[derive(Debug)]
 pub(crate) enum RegionType {
     Constant,
-    Fixed(u32),
-    Dynamic(u32),
+    Fixed(u16),
+    Dynamic(u16),
 }
 
 #[derive(Debug)]
@@ -19,6 +19,21 @@ pub(crate) enum Region {
     Argument,
     This,
     That,
+}
+
+impl Region {
+    pub(crate) fn offset(&self) -> RegionType {
+        match self {
+            Region::Constant => RegionType::Constant,
+            Region::Pointer => RegionType::Fixed(3),
+            Region::Temp => RegionType::Fixed(5),
+            Region::Static => RegionType::Fixed(16),
+            Region::Local => RegionType::Dynamic(1),
+            Region::Argument => RegionType::Dynamic(2),
+            Region::This => RegionType::Dynamic(3),
+            Region::That => RegionType::Dynamic(4),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
