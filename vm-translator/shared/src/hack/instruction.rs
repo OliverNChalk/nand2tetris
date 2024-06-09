@@ -1,62 +1,65 @@
+use std::fmt::Display;
 use std::str::FromStr;
-
-use thiserror::Error;
 
 use super::{AluOutput, Assignment, Branch};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Instruction {
     A(u16),
-    C(Assignment, AluOutput, Branch),
+    C(Option<Assignment>, AluOutput, Option<Branch>),
 }
 
-impl FromStr for Instruction {
-    type Err = ParseInstructionErr;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let to_err = |_| ParseInstructionErr(s.to_owned());
-
-        if s.starts_with('@') {
-            unimplemented!()
-        } else {
-            let has_assignment = s.contains('=');
-            let has_branch = s.contains(';');
-
-            match (has_assignment, has_branch) {
-                (true, true) => {
-                    let (assignment, rest) = s.split_once('=').unwrap();
-                    let (operation, branch) = rest.split_once(';').unwrap();
-
-                    Ok(Instruction::C(
-                        assignment.parse().map_err(to_err)?,
-                        operation.parse().map_err(to_err)?,
-                        branch.parse().map_err(to_err)?,
-                    ))
+impl Display for Instruction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Instruction::A(address) => write!(f, "@{address}"),
+            Instruction::C(assignment, alu_output, branch) => {
+                if let Some(assignment) = assignment {
+                    write!(f, "{assignment}=")?;
                 }
-                (true, false) => {
-                    let (assignment, operation) = s.split_once('=').unwrap();
 
-                    Ok(Instruction::C(
-                        assignment.parse().map_err(to_err)?,
-                        operation.parse().map_err(to_err)?,
-                        Branch::None,
-                    ))
-                }
-                (false, true) => {
-                    let (operation, branch) = s.split_once('=').unwrap();
+                write!(f, "{alu_output}")?;
 
-                    Ok(Instruction::C(
-                        Assignment::None,
-                        operation.parse().map_err(to_err)?,
-                        branch.parse().map_err(to_err)?,
-                    ))
+                if let Some(branch) = branch {
+                    write!(f, ";{branch}")?;
                 }
-                (false, false) => Err(ParseInstructionErr(s.to_owned())),
+
+                Ok(())
             }
         }
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Error)]
-#[error("Failed to parse instruction; instruction={0}")]
-pub struct ParseInstructionErr(pub String);
+impl FromStr for Instruction {
+    type Err = strum::ParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.starts_with('@') {
+            unimplemented!()
+        } else {
+            let mut alu_output = None;
+
+            // Parse assignment if it exists (setting alu ix at the same time).
+            let assignment = match s.split_once('=') {
+                Some((assignment, rest)) => {
+                    alu_output = Some(rest.split(';').next().unwrap_or(rest).parse()?);
+                    Some(assignment.parse()?)
+                }
+                None => None,
+            };
+
+            // Parse branch if it exists (setting alu ix at the same time).
+            let branch = match s.split_once(';') {
+                Some((rest, branch)) => {
+                    alu_output = Some(rest.split('=').nth(1).unwrap_or(rest).parse()?);
+                    Some(branch.parse()?)
+                }
+                None => None,
+            };
+
+            alu_output
+                .ok_or(strum::ParseError::VariantNotFound)
+                .map(|alu_output| Instruction::C(assignment, alu_output, branch))
+        }
+    }
+}

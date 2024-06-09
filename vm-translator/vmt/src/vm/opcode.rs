@@ -1,9 +1,7 @@
-use std::iter::once;
 use std::str::FromStr;
 
-use thiserror::Error;
-
 use shared::{assign, hack};
+use thiserror::Error;
 
 #[derive(Debug)]
 pub(crate) enum OpCode {

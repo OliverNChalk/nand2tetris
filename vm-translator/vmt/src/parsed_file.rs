@@ -4,7 +4,7 @@ use crate::vm;
 
 #[derive(Debug)]
 pub(crate) struct ParsedFile {
-    source: Vec<(usize, Result<vm::OpCode, vm::ParseOpCodeErr>)>,
+    pub(crate) source: Vec<(usize, Result<vm::OpCode, vm::ParseOpCodeErr>)>,
 }
 
 impl ParsedFile {
@@ -15,7 +15,7 @@ impl ParsedFile {
             .lines()
             .map(|line| line.trim())
             .enumerate()
-            .filter(|(_, line)| !(line.starts_with("//") || line.len() == 0))
+            .filter(|(_, line)| !line.starts_with("//") && line.len() > 0)
             .map(|(number, line)| (number + 1, line.parse()))
             .collect();
 

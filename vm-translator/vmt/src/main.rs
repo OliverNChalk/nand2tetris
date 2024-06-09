@@ -10,9 +10,23 @@ fn main() -> anyhow::Result<()> {
     let opts = opts::Opts::parse();
 
     // Load file & parse all lines.
-    let parsed = ParsedFile::from_file(&opts.file);
+    let parsed = ParsedFile::from_file(&opts.file)?;
 
-    println!("{parsed:#?}");
+    // Generate hack assembly for all parsed lines.
+    for (line, res) in parsed.source {
+        let hack = match res {
+            Ok(hack) => hack,
+            Err(err) => {
+                println!("ERR: {err}");
+                continue;
+            }
+        };
+
+        println!("{line}:");
+        for line in hack.bytecode() {
+            println!("{}", line);
+        }
+    }
 
     Ok(())
 }

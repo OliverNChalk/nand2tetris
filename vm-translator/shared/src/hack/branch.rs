@@ -1,9 +1,7 @@
 use strum::EnumString;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, EnumString)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, strum::Display, EnumString)]
 pub enum Branch {
-    #[strum(disabled)]
-    None,
     JGT,
     JEQ,
     JGE,
