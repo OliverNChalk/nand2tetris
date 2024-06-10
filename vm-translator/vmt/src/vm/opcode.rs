@@ -1,7 +1,9 @@
 use std::str::FromStr;
 
-use shared::{assign, hack};
+use shared::hack;
 use thiserror::Error;
+
+use super::RegionType;
 
 #[derive(Debug)]
 pub(crate) enum OpCode {
@@ -28,45 +30,106 @@ pub(crate) enum OpCode {
 }
 
 impl OpCode {
-    fn write_head() -> [hack::Instruction; 3] {
-        [hack::Instruction::A(0), assign!("A=M"), assign!("M=D")]
-    }
-
-    fn increment_stack() -> [hack::Instruction; 2] {
-        [hack::Instruction::A(0), assign!("M=M+1")]
-    }
-
     pub(crate) fn bytecode(&self) -> Vec<hack::Instruction> {
         match self {
             OpCode::Push(region, index) => match region.offset() {
-                super::RegionType::Constant => [hack::Instruction::A(*index), assign!("D=A")]
+                RegionType::Constant => [hack::Instruction::A(*index), hack!("D=A")]
                     .into_iter()
                     .chain(Self::write_head())
                     .chain(Self::increment_stack())
                     .collect(),
-                super::RegionType::Fixed(offset) => {
-                    [hack::Instruction::A(offset + index), assign!("D=M")]
-                        .into_iter()
-                        .chain(Self::write_head())
-                        .chain(Self::increment_stack())
-                        .collect()
-                }
+                RegionType::Fixed(offset) => [hack::Instruction::A(offset + index), hack!("D=M")]
+                    .into_iter()
+                    .chain(Self::write_head())
+                    .chain(Self::increment_stack())
+                    .collect(),
 
-                super::RegionType::Dynamic(offset) => [
-                    hack::Instruction::A(offset),
-                    assign!("D=M"),
-                    hack::Instruction::A(*index),
-                    assign!("D=D+A"),
-                    assign!("A=D"),
-                    assign!("D=M"),
+                RegionType::Dynamic(offset) => [
+                    hack!("@{offset}"),
+                    hack!("D=M"),
+                    hack!("@{index}"),
+                    hack!("D=D+A"),
+                    hack!("A=D"),
+                    hack!("D=M"),
                 ]
                 .into_iter()
                 .chain(Self::write_head())
                 .chain(Self::increment_stack())
                 .collect(),
             },
-            _ => todo!(),
+            OpCode::Pop(region, index) => match region.offset() {
+                RegionType::Constant => panic!("Cannot pop to constant"),
+                RegionType::Dynamic(offset) => Self::decrement_stack()
+                    .into_iter()
+                    .chain(Self::read_head())
+                    // TODO: This seems suboptimal, was lifted from old impl.
+                    .chain([
+                        // Store HEAD in R13.
+                        hack!("@R13"),
+                        hack!("M=D"),
+                        // Load offset.
+                        hack!("@{offset}"),
+                        hack!("D=M"),
+                        // Add index to offset.
+                        hack!("@{index}"),
+                        hack!("D=D+A"),
+                        // Store address in R14.
+                        hack!("@R14"),
+                        hack!("M=D"),
+                        // Load HEAD into D.
+                        hack!("@R13"),
+                        hack!("D=M"),
+                        // Load address into A.
+                        hack!("@R14"),
+                        hack!("A=M"),
+                        // Write D to address.
+                        hack!("M=D"),
+                    ])
+                    .collect(),
+                RegionType::Fixed(offset) => Self::decrement_stack()
+                    .into_iter()
+                    .chain(Self::read_head())
+                    .chain([hack!("@{}", offset + index), hack!("M=D")])
+                    .collect(),
+            },
+            OpCode::Add => Self::decrement_stack()
+                .into_iter()
+                .chain(Self::read_head())
+                .chain(Self::decrement_stack())
+                .chain([hack!("A=M"), hack!("D=D+M")])
+                .chain(Self::write_head())
+                .chain(Self::increment_stack())
+                .collect(),
+            OpCode::Sub => Self::decrement_stack()
+                .into_iter()
+                .chain(Self::read_negated_head())
+                .chain(Self::decrement_stack())
+                .chain([hack!("A=M"), hack!("D=D+M")])
+                .chain(Self::write_head())
+                .chain(Self::increment_stack())
+                .collect(),
+            opcode => todo!("opcode={opcode:?}"),
         }
+    }
+
+    fn read_head() -> [hack::Instruction; 2] {
+        [hack!("A=M"), hack!("D=M")]
+    }
+
+    fn read_negated_head() -> [hack::Instruction; 2] {
+        [hack!("A=M"), hack!("D=-M")]
+    }
+
+    fn write_head() -> [hack::Instruction; 3] {
+        [hack::Instruction::A(0), hack!("A=M"), hack!("M=D")]
+    }
+
+    fn increment_stack() -> [hack::Instruction; 2] {
+        [hack::Instruction::A(0), hack!("M=M+1")]
+    }
+
+    fn decrement_stack() -> [hack::Instruction; 2] {
+        [hack::Instruction::A(0), hack!("M=M-1")]
     }
 }
 

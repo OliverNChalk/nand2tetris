@@ -1,6 +1,8 @@
 use std::fmt::Display;
 use std::str::FromStr;
 
+use eyre::{eyre, OptionExt};
+
 use super::{AluOutput, Assignment, Branch};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -31,11 +33,32 @@ impl Display for Instruction {
 }
 
 impl FromStr for Instruction {
-    type Err = strum::ParseError;
+    type Err = eyre::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s.starts_with('@') {
-            unimplemented!()
+            let target = &s[1..];
+            match target.chars().next() {
+                Some('R') => {
+                    let register = target
+                        .get(1..)
+                        .ok_or_eyre("Missing register number; instruction={s}")?;
+                    let register = register.parse::<u16>()?;
+                    eyre::ensure!(
+                        register < 16,
+                        "Invalid register; register={register}; instruction={s}"
+                    );
+
+                    Ok(Instruction::A(register))
+                }
+                Some('0'..='9') => Ok(Instruction::A(target.parse()?)),
+                Some(_) => {
+                    let symbol = PredefinedSymbols::from_str(target)?;
+
+                    Ok(Instruction::A(symbol.address()))
+                }
+                _ => Err(eyre!("Invalid A instruction; instruction={s}")),
+            }
         } else {
             let mut alu_output = None;
 
@@ -58,8 +81,34 @@ impl FromStr for Instruction {
             };
 
             alu_output
-                .ok_or(strum::ParseError::VariantNotFound)
+                .ok_or(eyre!("Invalid C instruction; instruction={s}"))
                 .map(|alu_output| Instruction::C(assignment, alu_output, branch))
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, strum::Display, strum::EnumString)]
+#[strum(serialize_all = "UPPERCASE")]
+pub enum PredefinedSymbols {
+    Sp,
+    Lcl,
+    Arg,
+    This,
+    That,
+    Screen,
+    Kbd,
+}
+
+impl PredefinedSymbols {
+    pub fn address(&self) -> u16 {
+        match self {
+            Self::Sp => 0,
+            Self::Lcl => 1,
+            Self::Arg => 2,
+            Self::This => 3,
+            Self::That => 4,
+            Self::Screen => 16384,
+            Self::Kbd => 24576,
         }
     }
 }
