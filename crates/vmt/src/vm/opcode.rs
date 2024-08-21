@@ -30,19 +30,23 @@ pub(crate) enum OpCode {
 }
 
 impl OpCode {
-    pub(crate) fn bytecode(&self) -> Vec<hack::Instruction> {
+    pub(crate) fn bytecode(&self, label_counter: &mut Counter) -> Vec<hack::Instruction> {
         match self {
             OpCode::Push(region, index) => match region.offset() {
-                RegionType::Constant => [hack::Instruction::A(*index), hack!("D=A")]
-                    .into_iter()
-                    .chain(Self::write_head())
-                    .chain(Self::increment_stack())
-                    .collect(),
-                RegionType::Fixed(offset) => [hack::Instruction::A(offset + index), hack!("D=M")]
-                    .into_iter()
-                    .chain(Self::write_head())
-                    .chain(Self::increment_stack())
-                    .collect(),
+                RegionType::Constant => {
+                    [hack::Instruction::A(hack::Location::Address(*index)), hack!("D=A")]
+                        .into_iter()
+                        .chain(Self::write_head())
+                        .chain(Self::increment_stack())
+                        .collect()
+                }
+                RegionType::Fixed(offset) => {
+                    [hack::Instruction::A(hack::Location::Address(offset + index)), hack!("D=M")]
+                        .into_iter()
+                        .chain(Self::write_head())
+                        .chain(Self::increment_stack())
+                        .collect()
+                }
 
                 RegionType::Dynamic(offset) => [
                     hack!("@{offset}"),
@@ -108,6 +112,11 @@ impl OpCode {
                 .chain(Self::write_head())
                 .chain(Self::increment_stack())
                 .collect(),
+            OpCode::Eq => Self::compare(hack::Branch::JEQ, label_counter),
+            OpCode::Lt => Self::compare(hack::Branch::JLT, label_counter),
+            OpCode::Le => Self::compare(hack::Branch::JLE, label_counter),
+            OpCode::Gt => Self::compare(hack::Branch::JGT, label_counter),
+            OpCode::Ge => Self::compare(hack::Branch::JGE, label_counter),
             opcode => todo!("opcode={opcode:?}"),
         }
     }
@@ -121,15 +130,50 @@ impl OpCode {
     }
 
     fn write_head() -> [hack::Instruction; 3] {
-        [hack::Instruction::A(0), hack!("A=M"), hack!("M=D")]
+        [hack::Instruction::A(hack::Location::Address(0)), hack!("A=M"), hack!("M=D")]
     }
 
     fn increment_stack() -> [hack::Instruction; 2] {
-        [hack::Instruction::A(0), hack!("M=M+1")]
+        [hack::Instruction::A(hack::Location::Address(0)), hack!("M=M+1")]
     }
 
     fn decrement_stack() -> [hack::Instruction; 2] {
-        [hack::Instruction::A(0), hack!("M=M-1")]
+        [hack::Instruction::A(hack::Location::Address(0)), hack!("M=M-1")]
+    }
+
+    fn compare(branch: hack::Branch, label_counter: &mut Counter) -> Vec<hack::Instruction> {
+        let true_branch = format!("LOW_LEVEL_LABEL{}", label_counter.inc());
+        let continue_branch = format!("LOW_LEVEL_LABEL{}", label_counter.inc());
+
+        // Point at the first populated element.
+        Self::decrement_stack()
+            .into_iter()
+            // Set D to -HEAD.
+            .chain(Self::read_negated_head())
+            // Point at the next element.
+            .chain(Self::decrement_stack())
+            .chain([
+                // Get diff of 1st and 2nd element.
+                hack!("A=M"),
+                hack!("D=D+M"),
+                // Jump false if.
+                hack!("@{true_branch}"),
+                hack!("D;{branch}"),
+                // DEFAULT: IS FALSE
+                hack!("D=0"),
+                hack!("@{continue_branch}"),
+                hack!("0;JMP"),
+                // JUMP: IS TRUE
+                hack!("({true_branch})"),
+                hack!("D=-1"),
+                // JUMP: CONTINUE
+                hack!("({continue_branch})"),
+            ])
+            // Set HEAD to D.
+            .chain(Self::write_head())
+            // Point at next free slot.
+            .chain(Self::increment_stack())
+            .collect()
     }
 }
 
@@ -194,5 +238,17 @@ impl FromStr for OpCode {
             "not" => Ok(OpCode::Not),
             _ => Err(ParseOpCodeErr::Opcode(s.to_owned())),
         }
+    }
+}
+
+#[derive(Default)]
+pub(crate) struct Counter {
+    count: u32,
+}
+
+impl Counter {
+    pub fn inc(&mut self) -> u32 {
+        self.count += 1;
+        self.count
     }
 }

@@ -18,6 +18,7 @@ fn main() -> eyre::Result<()> {
         .map(|(number, source)| (number + 1, source.to_owned(), source.parse::<OpCode>()));
 
     // Generate hack assembly for all parsed lines.
+    let mut label_counter = vm::Counter::default();
     for (line, source, res) in opcodes {
         let hack = match res {
             Ok(hack) => hack,
@@ -28,7 +29,7 @@ fn main() -> eyre::Result<()> {
         };
 
         println!("// L{line}: {source}");
-        for ix in hack.bytecode() {
+        for ix in hack.bytecode(&mut label_counter) {
             println!("{ix}");
         }
     }

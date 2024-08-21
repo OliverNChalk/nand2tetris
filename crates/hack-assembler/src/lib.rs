@@ -102,7 +102,6 @@ fn next_free_mem_addr(symbols: &HashMap<&str, u32>, label_count: u32) -> u32 {
     let address = symbols.len() as u32;
     let address = address + USER_MEM_START;
     let address = address - PREDEFINED_SYMBOLS.len() as u32;
-    
 
     address - label_count
 }
