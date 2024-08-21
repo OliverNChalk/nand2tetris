@@ -9,12 +9,12 @@ fn main() -> eyre::Result<()> {
     let opts = opts::Opts::parse();
 
     // Load file & parse all lines.
-    let input = std::fs::read_to_string(&opts.file)?;
+    let input = std::fs::read_to_string(opts.file)?;
     let opcodes = input
         .lines()
         .map(|line| line.trim())
         .enumerate()
-        .filter(|(_, line)| line.len() > 0 && !line.starts_with("//"))
+        .filter(|(_, line)| !line.is_empty() && !line.starts_with("//"))
         .map(|(number, source)| (number + 1, source.to_owned(), source.parse::<OpCode>()));
 
     // Generate hack assembly for all parsed lines.

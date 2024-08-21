@@ -36,8 +36,7 @@ impl FromStr for Instruction {
     type Err = eyre::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.starts_with('@') {
-            let target = &s[1..];
+        if let Some(target) = s.strip_prefix('@') {
             match target.chars().next() {
                 Some('R') => {
                     let register = target
