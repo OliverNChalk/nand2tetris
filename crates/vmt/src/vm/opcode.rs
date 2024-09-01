@@ -117,7 +117,43 @@ impl OpCode {
             OpCode::Le => Self::compare(hack::Branch::JLE, label_counter),
             OpCode::Gt => Self::compare(hack::Branch::JGT, label_counter),
             OpCode::Ge => Self::compare(hack::Branch::JGE, label_counter),
-            opcode => todo!("opcode={opcode:?}"),
+            OpCode::Neg => Self::decrement_stack()
+                .into_iter()
+                .chain([hack!("A=M"), hack!("D=-M")])
+                .chain(Self::write_head())
+                .chain(Self::increment_stack())
+                .collect(),
+            OpCode::And => [
+                Self::decrement_stack().as_slice(),
+                Self::read_head().as_slice(),
+                Self::decrement_stack().as_slice(),
+                [hack!("A=M"), hack!("D=D&M")].as_slice(),
+                Self::write_head().as_slice(),
+                Self::increment_stack().as_slice(),
+            ]
+            .into_iter()
+            .flat_map(|ix| ix.iter().cloned())
+            .collect(),
+            OpCode::Or => [
+                Self::decrement_stack().as_slice(),
+                Self::read_head().as_slice(),
+                Self::decrement_stack().as_slice(),
+                [hack!("A=M"), hack!("D=D|M")].as_slice(),
+                Self::write_head().as_slice(),
+                Self::increment_stack().as_slice(),
+            ]
+            .into_iter()
+            .flat_map(|ix| ix.iter().cloned())
+            .collect(),
+            OpCode::Not => [
+                Self::decrement_stack().as_slice(),
+                [hack!("A=M"), hack!("D=!M")].as_slice(),
+                Self::write_head().as_slice(),
+                Self::increment_stack().as_slice(),
+            ]
+            .into_iter()
+            .flat_map(|ix| ix.iter().cloned())
+            .collect(),
         }
     }
 
