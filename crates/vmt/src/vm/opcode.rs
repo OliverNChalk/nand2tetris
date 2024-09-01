@@ -220,7 +220,7 @@ pub(crate) enum ParseOpCodeErr {
     #[error("Invalid argument count; line={0}")]
     ArgumentCount(String),
     #[error("Invalid region; line={0}")]
-    Region(super::ParseRegionErr),
+    Region(#[from] strum::ParseError),
     #[error("Invalid index; line={0}")]
     Index(std::num::ParseIntError),
 }
@@ -230,15 +230,14 @@ impl FromStr for OpCode {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut words = s.trim().split(' ');
-        let first = words.next().ok_or_else(|| todo!())?;
+        let first = words.next().unwrap();
 
         match first {
             "push" => {
                 let region = words
                     .next()
                     .ok_or_else(|| ParseOpCodeErr::ArgumentCount(s.to_owned()))?
-                    .parse()
-                    .map_err(ParseOpCodeErr::Region)?;
+                    .parse()?;
                 let index = words
                     .next()
                     .ok_or_else(|| ParseOpCodeErr::ArgumentCount(s.to_owned()))?
@@ -251,8 +250,7 @@ impl FromStr for OpCode {
                 let region = words
                     .next()
                     .ok_or_else(|| ParseOpCodeErr::ArgumentCount(s.to_owned()))?
-                    .parse()
-                    .map_err(ParseOpCodeErr::Region)?;
+                    .parse()?;
                 let index = words
                     .next()
                     .ok_or_else(|| ParseOpCodeErr::ArgumentCount(s.to_owned()))?

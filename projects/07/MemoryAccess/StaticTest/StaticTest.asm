@@ -27,24 +27,24 @@ M=M+1
 M=M-1
 A=M
 D=M
-@13
+@24
 M=D
 // L11: pop static 3
 @0
 M=M-1
 A=M
 D=M
-@8
+@19
 M=D
 // L12: pop static 1
 @0
 M=M-1
 A=M
 D=M
-@6
+@17
 M=D
 // L13: push static 3
-@8
+@19
 D=M
 @0
 A=M
@@ -52,7 +52,7 @@ M=D
 @0
 M=M+1
 // L14: push static 1
-@6
+@17
 D=M
 @0
 A=M
@@ -74,7 +74,7 @@ M=D
 @0
 M=M+1
 // L16: push static 8
-@13
+@24
 D=M
 @0
 A=M

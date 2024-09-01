@@ -9,4 +9,5 @@ clap = { version = "4.3.0", features = ["derive"] }
 const_format = { version = "0.2.30", features = ["rust_1_64"] }
 eyre = "0.6.12"
 shared.workspace = true
+strum = { version = "0.26.3", features = ["derive"] }
 thiserror.workspace = true
