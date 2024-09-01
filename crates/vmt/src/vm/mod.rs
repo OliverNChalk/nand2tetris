@@ -1,5 +1,7 @@
+mod element;
 mod opcode;
-pub(crate) use opcode::*;
-
 mod region;
+
+pub(crate) use element::*;
+pub(crate) use opcode::*;
 pub(crate) use region::*;

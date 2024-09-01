@@ -27,10 +27,13 @@ pub(crate) enum OpCode {
     And,
     Or,
     Not,
+
+    // Control flow.
+    IfGoto(String),
 }
 
 impl OpCode {
-    pub(crate) fn bytecode(&self, label_counter: &mut Counter) -> Vec<hack::Instruction> {
+    pub(crate) fn bytecode(&self, label_counter: &mut hack::Labels) -> Vec<hack::Instruction> {
         match self {
             OpCode::Push(region, index) => match region.offset() {
                 RegionType::Constant => {
@@ -154,6 +157,16 @@ impl OpCode {
             .into_iter()
             .flat_map(|ix| ix.iter().cloned())
             .collect(),
+            OpCode::IfGoto(label) => {
+                // TODO:
+                //
+                // - D is output of previous comparison.
+                // - Lookup address of label.
+                // - Set A to address of label.
+                // - 0;JNE (jump to label if D is not zero).
+
+                todo!();
+            }
         }
     }
 
@@ -177,9 +190,9 @@ impl OpCode {
         [hack::Instruction::A(hack::Location::Address(0)), hack!("M=M-1")]
     }
 
-    fn compare(branch: hack::Branch, label_counter: &mut Counter) -> Vec<hack::Instruction> {
-        let true_branch = format!("LOW_LEVEL_LABEL{}", label_counter.inc());
-        let continue_branch = format!("LOW_LEVEL_LABEL{}", label_counter.inc());
+    fn compare(branch: hack::Branch, labels: &mut hack::Labels) -> Vec<hack::Instruction> {
+        let true_branch = labels.next();
+        let continue_branch = labels.next();
 
         // Point at the first populated element.
         Self::decrement_stack()
@@ -215,13 +228,13 @@ impl OpCode {
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub(crate) enum ParseOpCodeErr {
-    #[error("Invalid opcode; line={0}")]
-    Opcode(String),
-    #[error("Invalid argument count; line={0}")]
-    ArgumentCount(String),
-    #[error("Invalid region; line={0}")]
+    #[error("Invalid opcode")]
+    Opcode,
+    #[error("Invalid argument count")]
+    ArgumentCount,
+    #[error("Invalid region; err={0}")]
     Region(#[from] strum::ParseError),
-    #[error("Invalid index; line={0}")]
+    #[error("Invalid index; err={0}")]
     Index(std::num::ParseIntError),
 }
 
@@ -234,26 +247,20 @@ impl FromStr for OpCode {
 
         match first {
             "push" => {
-                let region = words
-                    .next()
-                    .ok_or_else(|| ParseOpCodeErr::ArgumentCount(s.to_owned()))?
-                    .parse()?;
+                let region = words.next().ok_or(ParseOpCodeErr::ArgumentCount)?.parse()?;
                 let index = words
                     .next()
-                    .ok_or_else(|| ParseOpCodeErr::ArgumentCount(s.to_owned()))?
+                    .ok_or(ParseOpCodeErr::ArgumentCount)?
                     .parse()
                     .map_err(ParseOpCodeErr::Index)?;
 
                 Ok(OpCode::Push(region, index))
             }
             "pop" => {
-                let region = words
-                    .next()
-                    .ok_or_else(|| ParseOpCodeErr::ArgumentCount(s.to_owned()))?
-                    .parse()?;
+                let region = words.next().ok_or(ParseOpCodeErr::ArgumentCount)?.parse()?;
                 let index = words
                     .next()
-                    .ok_or_else(|| ParseOpCodeErr::ArgumentCount(s.to_owned()))?
+                    .ok_or(ParseOpCodeErr::ArgumentCount)?
                     .parse()
                     .map_err(ParseOpCodeErr::Index)?;
 
@@ -270,7 +277,12 @@ impl FromStr for OpCode {
             "and" => Ok(OpCode::And),
             "or" => Ok(OpCode::Or),
             "not" => Ok(OpCode::Not),
-            _ => Err(ParseOpCodeErr::Opcode(s.to_owned())),
+            "if-goto" => {
+                let label = words.next().ok_or(ParseOpCodeErr::ArgumentCount)?;
+
+                Ok(OpCode::IfGoto(label.to_owned()))
+            }
+            _ => Err(ParseOpCodeErr::Opcode),
         }
     }
 }

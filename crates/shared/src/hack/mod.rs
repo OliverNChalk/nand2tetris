@@ -1,13 +1,12 @@
 mod alu_output;
-pub use alu_output::*;
-
 mod assignment;
-pub use assignment::*;
-
 mod branch;
-pub use branch::*;
-
 mod instruction;
-pub use instruction::*;
-
+mod labels;
 mod macros;
+
+pub use alu_output::*;
+pub use assignment::*;
+pub use branch::*;
+pub use instruction::*;
+pub use labels::*;
