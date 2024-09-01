@@ -1,7 +1,3 @@
-use std::str::FromStr;
-
-use thiserror::Error;
-
 #[derive(Debug)]
 pub(crate) enum RegionType {
     Constant,
@@ -9,7 +5,8 @@ pub(crate) enum RegionType {
     Dynamic(u16),
 }
 
-#[derive(Debug)]
+#[derive(Debug, strum::EnumString)]
+#[strum(serialize_all = "lowercase")]
 pub(crate) enum Region {
     Constant,
     Pointer,
@@ -32,28 +29,6 @@ impl Region {
             Region::Argument => RegionType::Dynamic(2),
             Region::This => RegionType::Dynamic(3),
             Region::That => RegionType::Dynamic(4),
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Error)]
-#[error("Invalid region; line={0}")]
-pub(crate) struct ParseRegionErr(String);
-
-impl FromStr for Region {
-    type Err = ParseRegionErr;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "constant" => Ok(Region::Constant),
-            "pointer" => Ok(Region::Pointer),
-            "temp" => Ok(Region::Temp),
-            "static" => Ok(Region::Temp),
-            "local" => Ok(Region::Local),
-            "argument" => Ok(Region::Argument),
-            "this" => Ok(Region::This),
-            "that" => Ok(Region::That),
-            _ => Err(ParseRegionErr(s.to_owned())),
         }
     }
 }

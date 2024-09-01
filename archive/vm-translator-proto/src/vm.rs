@@ -58,7 +58,7 @@ pub struct Counter {
 
 impl Counter {
     pub fn new() -> Counter {
-        Counter{ count: 0 }
+        Counter { count: 0 }
     }
 
     pub fn inc(&mut self) -> u32 {
@@ -70,39 +70,23 @@ impl Counter {
 
 // hack helpers
 fn increment_stack() -> Vec<String> {
-    vec![
-        format!("@0"),
-        format!("M=M+1"),
-    ]
+    vec![format!("@0"), format!("M=M+1")]
 }
 
 fn decrement_stack() -> Vec<String> {
-    vec![
-        format!("@0"),
-        format!("M=M-1"),
-    ]
+    vec![format!("@0"), format!("M=M-1")]
 }
 
 fn write_head() -> Vec<String> {
-    vec![
-        format!("@0"),
-        format!("A=M"),
-        format!("M=D"),
-    ]
+    vec![format!("@0"), format!("A=M"), format!("M=D")]
 }
 
 fn read_head() -> Vec<String> {
-    vec![
-        format!("A=M"),
-        format!("D=M"),
-    ]
+    vec![format!("A=M"), format!("D=M")]
 }
 
 fn read_negated_head() -> Vec<String> {
-    vec![
-        format!("A=M"),
-        format!("D=-M"),
-    ]
+    vec![format!("A=M"), format!("D=-M")]
 }
 
 enum VmComparison {
@@ -300,7 +284,7 @@ pub fn sub() -> Vec<String> {
 
     // point at the first populated element
     result.append(&mut decrement_stack());
-    // set D to HEAD
+    // set D to -HEAD
     result.append(&mut read_negated_head());
     // point at the next populated element
     result.append(&mut decrement_stack());

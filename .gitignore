@@ -1,2 +1,4 @@
+*.pdf
+
 /tools
-/hack_chips.pdf
+/target

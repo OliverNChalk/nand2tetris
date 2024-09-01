@@ -35,12 +35,12 @@ pub fn translate_file(file: &Vec<String>) -> String {
         .map(|x| translate_line(x, &mut symbols, label_count))
         .collect();
 
-    return result.join("\n") + "\n";
+    result.join("\n") + "\n"
 }
 
 fn process_raw_file(file: &Vec<String>) -> (Vec<String>, HashMap<&str, u32>, u32) {
     let mut instructions = Vec::with_capacity(file.len());
-    let mut labels: HashMap<&str, u32> = PREDEFINED_SYMBOLS.iter().map(|x| *x).collect();
+    let mut labels: HashMap<&str, u32> = PREDEFINED_SYMBOLS.iter().copied().collect();
     let mut inst_count = 0;
     let mut label_count = 0;
 
@@ -51,13 +51,13 @@ fn process_raw_file(file: &Vec<String>) -> (Vec<String>, HashMap<&str, u32>, u32
             line.trim()
         };
 
-        if clean_line.chars().nth(0) == Some('(') {
+        if clean_line.starts_with('(') {
             let label = &clean_line[1..clean_line.len() - 1];
             let prev_label = labels.insert(label, inst_count);
 
             assert_eq!(prev_label, None, "Duplicate labels: {}", label); // TODO: Propogate error upwards
             label_count += 1;
-        } else if clean_line.len() != 0 {
+        } else if !clean_line.is_empty() {
             instructions.push(clean_line.to_owned());
             inst_count += 1;
         }
@@ -71,12 +71,12 @@ fn translate_line<'a>(
     symbols: &mut HashMap<&'a str, u32>,
     label_count: u32,
 ) -> String {
-    let first_char = line.chars().nth(0);
+    let first_char = line.chars().next();
 
-    return match first_char {
+    match first_char {
         Some('@') => translate_a(line, symbols, label_count),
         _ => translate_c(line),
-    };
+    }
 }
 
 fn translate_a<'a>(
@@ -87,7 +87,7 @@ fn translate_a<'a>(
     let symbol = &line[1..];
 
     if let Ok(address) = symbol.parse::<u16>() {
-        return format!("{:016b}", address);
+        format!("{:016b}", address)
     } else if let Some(address) = symbols.get(symbol) {
         return format!("{:016b}", address);
     } else {
@@ -102,9 +102,8 @@ fn next_free_mem_addr(symbols: &HashMap<&str, u32>, label_count: u32) -> u32 {
     let address = symbols.len() as u32;
     let address = address + USER_MEM_START;
     let address = address - PREDEFINED_SYMBOLS.len() as u32;
-    let address = address - label_count;
 
-    address
+    address - label_count
 }
 
 fn translate_c(line: &str) -> String {
@@ -128,7 +127,7 @@ fn translate_c(line: &str) -> String {
     let comp = translate_comp(comp);
     let jump = translate_jump(jump);
 
-    return format!("111{}{}{}", comp, dest, jump);
+    format!("111{}{}{}", comp, dest, jump)
 }
 
 fn translate_dest(source: Option<&str>) -> String {
@@ -146,7 +145,7 @@ fn translate_dest(source: Option<&str>) -> String {
         }
     }
 
-    return format!("{:03b}", result);
+    format!("{:03b}", result)
 }
 
 fn translate_comp(source: &str) -> String {
