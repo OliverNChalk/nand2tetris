@@ -19,18 +19,28 @@ fn main() -> eyre::Result<()> {
 
     // Generate hack assembly for all parsed lines.
     let mut label_counter = vm::Counter::default();
+    let mut output = Vec::default();
+    let mut errors = false;
     for (line, source, res) in opcodes {
         let hack = match res {
             Ok(hack) => hack,
             Err(err) => {
-                println!("ERR: {err}");
+                eprintln!("ERR: {err}");
+                errors = true;
                 continue;
             }
         };
 
-        println!("// L{line}: {source}");
+        output.push(format!("// L{line}: {source}"));
         for ix in hack.bytecode(&mut label_counter) {
-            println!("{ix}");
+            output.push(format!("{ix}"));
+        }
+    }
+
+    // Only print the file output if we had no errors.
+    if !errors {
+        for line in output {
+            println!("{line}");
         }
     }
 
