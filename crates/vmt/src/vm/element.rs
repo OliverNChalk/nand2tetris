@@ -1,12 +1,22 @@
 use std::str::FromStr;
 
 use eyre::eyre;
+use shared::hack;
 
 use super::OpCode;
 
 pub(crate) enum Element {
     Opcode(OpCode),
     Label(String),
+}
+
+impl Element {
+    pub(crate) fn bytecode(&self, labels: &mut hack::Labels) -> Vec<hack::Instruction> {
+        match self {
+            Element::Opcode(opcode) => opcode.bytecode(labels),
+            Element::Label(label) => vec![hack::Instruction::Label(label.to_owned())],
+        }
+    }
 }
 
 impl FromStr for Element {

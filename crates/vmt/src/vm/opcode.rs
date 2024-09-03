@@ -33,7 +33,7 @@ pub(crate) enum OpCode {
 }
 
 impl OpCode {
-    pub(crate) fn bytecode(&self, label_counter: &mut hack::Labels) -> Vec<hack::Instruction> {
+    pub(crate) fn bytecode(&self, labels: &mut hack::Labels) -> Vec<hack::Instruction> {
         match self {
             OpCode::Push(region, index) => match region.offset() {
                 RegionType::Constant => {
@@ -115,11 +115,11 @@ impl OpCode {
                 .chain(Self::write_head())
                 .chain(Self::increment_stack())
                 .collect(),
-            OpCode::Eq => Self::compare(hack::Branch::JEQ, label_counter),
-            OpCode::Lt => Self::compare(hack::Branch::JLT, label_counter),
-            OpCode::Le => Self::compare(hack::Branch::JLE, label_counter),
-            OpCode::Gt => Self::compare(hack::Branch::JGT, label_counter),
-            OpCode::Ge => Self::compare(hack::Branch::JGE, label_counter),
+            OpCode::Eq => Self::compare(hack::Branch::JEQ, labels),
+            OpCode::Lt => Self::compare(hack::Branch::JLT, labels),
+            OpCode::Le => Self::compare(hack::Branch::JLE, labels),
+            OpCode::Gt => Self::compare(hack::Branch::JGT, labels),
+            OpCode::Ge => Self::compare(hack::Branch::JGE, labels),
             OpCode::Neg => Self::decrement_stack()
                 .into_iter()
                 .chain([hack!("A=M"), hack!("D=-M")])
@@ -155,18 +155,18 @@ impl OpCode {
                 Self::increment_stack().as_slice(),
             ]
             .into_iter()
-            .flat_map(|ix| ix.iter().cloned())
+            .flatten()
+            .cloned()
             .collect(),
-            OpCode::IfGoto(label) => {
-                // TODO:
-                //
-                // - D is output of previous comparison.
-                // - Lookup address of label.
-                // - Set A to address of label.
-                // - 0;JNE (jump to label if D is not zero).
-
-                todo!();
-            }
+            OpCode::IfGoto(label) => [
+                Self::decrement_stack().as_slice(),
+                [hack!("@{label}")].as_slice(),
+                [hack!("D;JNE")].as_slice(),
+            ]
+            .into_iter()
+            .flatten()
+            .cloned()
+            .collect(),
         }
     }
 
@@ -284,17 +284,5 @@ impl FromStr for OpCode {
             }
             _ => Err(ParseOpCodeErr::Opcode),
         }
-    }
-}
-
-#[derive(Default)]
-pub(crate) struct Counter {
-    count: u32,
-}
-
-impl Counter {
-    pub fn inc(&mut self) -> u32 {
-        self.count += 1;
-        self.count
     }
 }

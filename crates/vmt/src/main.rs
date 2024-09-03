@@ -1,20 +1,18 @@
 mod opts;
 mod vm;
 
-use std::collections::HashMap;
-
-use clap::Parser;
-use eyre::eyre;
-use shared::hack;
-use vm::Element;
-
 fn main() -> eyre::Result<()> {
+    use clap::Parser;
+    use eyre::eyre;
+    use shared::hack;
+    use vm::Element;
+
     // Parse command line args.
     let opts = opts::Opts::parse();
 
     // Load file & parse all lines.
     let input = std::fs::read_to_string(opts.file)?;
-    let elements = input
+    let parse_results = input
         .lines()
         .map(|line| {
             // Strip everything after the comment.
@@ -28,11 +26,10 @@ fn main() -> eyre::Result<()> {
         .map(|(number, source)| (number + 1, source.to_owned(), source.parse::<Element>()));
 
     // First pass, extract all labels and check for any errors.
-    let mut opcodes = Vec::default();
+    let mut elements = Vec::default();
     let mut hack_labels = hack::Labels::default();
-    let mut vm_labels: HashMap<String, String> = HashMap::default();
     let mut errors = false;
-    for (number, source, res) in elements {
+    for (number, source, res) in parse_results {
         let element = match res {
             Ok(element) => element,
             Err(err) => {
@@ -43,14 +40,8 @@ fn main() -> eyre::Result<()> {
             }
         };
 
-        match element {
-            Element::Opcode(opcode) => opcodes.push((number, source, opcode)),
-            Element::Label(label) => {
-                let hack_label = hack_labels.next();
-
-                assert!(vm_labels.insert(label, hack_label).is_none());
-            }
-        }
+        // Push the element.
+        elements.push((number, source, element));
     }
 
     // Bail if we had errors in the first pass.
@@ -59,7 +50,7 @@ fn main() -> eyre::Result<()> {
     }
 
     // Generate hack assembly for all parsed lines.
-    for (line, source, element) in opcodes {
+    for (line, source, element) in elements {
         println!("// L{line}: {source}");
         for ix in element.bytecode(&mut hack_labels) {
             println!("{ix}");
