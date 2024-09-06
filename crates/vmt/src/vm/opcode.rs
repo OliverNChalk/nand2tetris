@@ -30,6 +30,7 @@ pub(crate) enum OpCode {
 
     // Control flow.
     IfGoto(String),
+    Goto(String),
 }
 
 impl OpCode {
@@ -167,6 +168,11 @@ impl OpCode {
             .flatten()
             .cloned()
             .collect(),
+            OpCode::Goto(label) => [[hack!("@{label}")].as_slice(), [hack!("0;JMP")].as_slice()]
+                .into_iter()
+                .flatten()
+                .cloned()
+                .collect(),
         }
     }
 
@@ -281,6 +287,11 @@ impl FromStr for OpCode {
                 let label = words.next().ok_or(ParseOpCodeErr::ArgumentCount)?;
 
                 Ok(OpCode::IfGoto(label.to_owned()))
+            }
+            "goto" => {
+                let label = words.next().ok_or(ParseOpCodeErr::ArgumentCount)?;
+
+                Ok(OpCode::Goto(label.to_owned()))
             }
             _ => Err(ParseOpCodeErr::Opcode),
         }
