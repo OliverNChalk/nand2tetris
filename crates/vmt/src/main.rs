@@ -3,13 +3,6 @@ mod opcode;
 mod parser;
 mod region;
 
-// TODO
-//
-// 1. Support loading directories.
-// 2. Parse all files into VmFile struct that contains the file name and list of
-//    opcodes.
-// 3. Translate each opcode into assembly.
-
 fn main() -> eyre::Result<()> {
     use clap::Parser;
 
