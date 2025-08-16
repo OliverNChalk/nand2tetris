@@ -12,6 +12,10 @@ pub(crate) enum OpCode {
     Push(Region, u16),
     Pop(Region, u16),
 
+    // Function.
+    Function { name: String, args: u8 },
+    Return,
+
     // Control flow.
     Label(String),
     Goto(String),
@@ -102,6 +106,8 @@ impl OpCode {
                     .chain([hack!("@{}", offset + index), hack!("M=D")])
                     .collect(),
             },
+            OpCode::Function { name: label, args } => Self::function(label, *args),
+            OpCode::Return => Self::function_return(),
             OpCode::Label(label) => vec![hack!("({label})")],
             OpCode::Goto(label) => vec![hack!("@{label}"), hack!("0;JMP")],
             OpCode::IfGoto(label) => Self::decrement_stack()
@@ -190,6 +196,66 @@ impl OpCode {
         [hack::Instruction::A(hack::Location::Address(0)), hack!("M=M-1")]
     }
 
+    fn function(label: &str, args: u8) -> Vec<hack::Instruction> {
+        std::iter::once(hack!("({label})"))
+            .chain(
+                (0..args)
+                    .flat_map(|_| std::iter::once(hack!("D=0")).chain(Self::increment_stack())),
+            )
+            .collect()
+    }
+
+    fn function_return() -> Vec<hack::Instruction> {
+        // frame = LCL.
+        [hack!("@LCL"), hack!("D=M"), hack!("@R10"), hack!("M=D")]
+            .into_iter()
+            // *ARG = pop()
+            .chain(Self::decrement_stack())
+            .chain(Self::read_head())
+            .chain([hack!("@ARG"), hack!("A=M"), hack!("M=D")])
+            // SP = ARG + 1
+            .chain([hack!("@ARG"), hack!("D=M+1"), hack!("@SP"), hack!("M=D")])
+            // THAT = *(--frame)
+            .chain([
+                hack!("@R10"),
+                hack!("M=M-1"),
+                hack!("A=M"),
+                hack!("D=M"),
+                hack!("@THAT"),
+                hack!("M=D"),
+            ])
+            // THIS = *(--frame)
+            .chain([
+                hack!("@R10"),
+                hack!("M=M-1"),
+                hack!("A=M"),
+                hack!("D=M"),
+                hack!("@THIS"),
+                hack!("M=D"),
+            ])
+            // ARG = *(--frame)
+            .chain([
+                hack!("@R10"),
+                hack!("M=M-1"),
+                hack!("A=M"),
+                hack!("D=M"),
+                hack!("@ARG"),
+                hack!("M=D"),
+            ])
+            // LCL = *(--frame)
+            .chain([
+                hack!("@R10"),
+                hack!("M=M-1"),
+                hack!("A=M"),
+                hack!("D=M"),
+                hack!("@LCL"),
+                hack!("M=D"),
+            ])
+            // goto *(--frame)
+            .chain([hack!("@R10"), hack!("M=M-1"), hack!("A=M"), hack!("0;JMP")])
+            .collect()
+    }
+
     fn compare(branch: hack::Branch, label_counter: &mut LabelCounter) -> Vec<hack::Instruction> {
         let true_branch = format!("LOW_LEVEL_LABEL{}", label_counter.inc());
         let continue_branch = format!("LOW_LEVEL_LABEL{}", label_counter.inc());
@@ -236,6 +302,8 @@ pub(crate) enum ParseOpCodeErr {
     Region(String),
     #[error("Invalid index; line={0}; err={1}")]
     Index(String, ParseIntError),
+    #[error("Invalid function args; line={0}; err={1}")]
+    FunctionArgs(String, ParseIntError),
 }
 
 impl FromStr for OpCode {
@@ -276,6 +344,20 @@ impl FromStr for OpCode {
 
                 Ok(OpCode::Pop(region, index))
             }
+            "function" => {
+                let name = words
+                    .next()
+                    .ok_or_else(|| ParseOpCodeErr::ArgumentCount(s.to_owned()))?;
+                let args = words
+                    .next()
+                    .ok_or_else(|| ParseOpCodeErr::ArgumentCount(s.to_owned()))?;
+                let args = args
+                    .parse()
+                    .map_err(|err| ParseOpCodeErr::FunctionArgs(args.to_string(), err))?;
+
+                Ok(OpCode::Function { name: name.to_string(), args })
+            }
+            "return" => Ok(OpCode::Return),
             "label" => Ok(OpCode::Label(
                 words
                     .next()
