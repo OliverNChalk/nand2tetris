@@ -14,6 +14,7 @@ pub(crate) enum OpCode {
 
     // Function.
     Function { name: String, args: u8 },
+    Call { name: String, args: u8 },
     Return,
 
     // Control flow.
@@ -106,7 +107,8 @@ impl OpCode {
                     .chain([hack!("@{}", offset + index), hack!("M=D")])
                     .collect(),
             },
-            OpCode::Function { name: label, args } => Self::function(label, *args),
+            OpCode::Function { name, args } => Self::function(name, *args),
+            OpCode::Call { name, args } => Self::function_call(label_counter, name, *args),
             OpCode::Return => Self::function_return(),
             OpCode::Label(label) => vec![hack!("({label})")],
             OpCode::Goto(label) => vec![hack!("@{label}"), hack!("0;JMP")],
@@ -198,17 +200,75 @@ impl OpCode {
 
     fn function(label: &str, args: u8) -> Vec<hack::Instruction> {
         std::iter::once(hack!("({label})"))
-            .chain(
-                (0..args)
-                    .flat_map(|_| std::iter::once(hack!("D=0")).chain(Self::increment_stack())),
-            )
+            .chain((0..args).flat_map(|_| {
+                std::iter::once(hack!("D=0"))
+                    .chain(Self::write_head())
+                    .chain(Self::increment_stack())
+            }))
+            .collect()
+    }
+
+    fn function_call(
+        label_counter: &mut LabelCounter,
+        function: &str,
+        args: u8,
+    ) -> Vec<hack::Instruction> {
+        let ret_label = format!("{function}.{}.ret", label_counter.inc());
+
+        [].into_iter()
+            // push returnAddress
+            .chain([hack!("@{ret_label}"), hack!("D=A")])
+            .chain(Self::write_head())
+            .chain(Self::increment_stack())
+            // push LCL
+            .chain([hack!("@LCL"), hack!("D=M")])
+            .chain(Self::write_head())
+            .chain(Self::increment_stack())
+            // push ARG
+            .chain([hack!("@ARG"), hack!("D=M")])
+            .chain(Self::write_head())
+            .chain(Self::increment_stack())
+            // push THIS
+            .chain([hack!("@THIS"), hack!("D=M")])
+            .chain(Self::write_head())
+            .chain(Self::increment_stack())
+            // push THAT
+            .chain([hack!("@THAT"), hack!("D=M")])
+            .chain(Self::write_head())
+            .chain(Self::increment_stack())
+            // ARG = SP-5-nArgs
+            .chain([
+                hack!("@{}", 5 + args),
+                hack!("D=A"),
+                hack!("@SP"),
+                hack!("D=M-D"),
+                hack!("@ARG"),
+                hack!("M=D"),
+            ])
+            // LCL = SP
+            .chain([hack!("@SP"), hack!("D=M"), hack!("@LCL"), hack!("M=D")])
+            // goto function
+            .chain([hack!("@{function}"), hack!("0;JMP")])
+            // returnAddress
+            .chain([hack!("({ret_label})")])
             .collect()
     }
 
     fn function_return() -> Vec<hack::Instruction> {
-        // frame = LCL.
+        // frame = LCL
         [hack!("@LCL"), hack!("D=M"), hack!("@R10"), hack!("M=D")]
             .into_iter()
+            // retAddr = *(LCL-5)
+            .chain([
+                hack!("@LCL"),
+                hack!("D=M"),
+                hack!("@5"),
+                hack!("D=D-A"),
+                hack!("A=D"),
+                hack!("D=M"),
+                hack!("@R11"),
+                hack!("M=D"),
+            ])
             // *ARG = pop()
             .chain(Self::decrement_stack())
             .chain(Self::read_head())
@@ -251,8 +311,8 @@ impl OpCode {
                 hack!("@LCL"),
                 hack!("M=D"),
             ])
-            // goto *(--frame)
-            .chain([hack!("@R10"), hack!("M=M-1"), hack!("A=M"), hack!("0;JMP")])
+            // goto retAddr
+            .chain([hack!("@R11"), hack!("A=M"), hack!("0;JMP")])
             .collect()
     }
 
@@ -356,6 +416,19 @@ impl FromStr for OpCode {
                     .map_err(|err| ParseOpCodeErr::FunctionArgs(args.to_string(), err))?;
 
                 Ok(OpCode::Function { name: name.to_string(), args })
+            }
+            "call" => {
+                let name = words
+                    .next()
+                    .ok_or_else(|| ParseOpCodeErr::ArgumentCount(s.to_owned()))?;
+                let args = words
+                    .next()
+                    .ok_or_else(|| ParseOpCodeErr::ArgumentCount(s.to_owned()))?;
+                let args = args
+                    .parse()
+                    .map_err(|err| ParseOpCodeErr::FunctionArgs(args.to_string(), err))?;
+
+                Ok(OpCode::Call { name: name.to_string(), args })
             }
             "return" => Ok(OpCode::Return),
             "label" => Ok(OpCode::Label(
