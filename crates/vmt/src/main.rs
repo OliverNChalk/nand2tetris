@@ -1,25 +1,41 @@
 mod args;
-mod vm;
+mod opcode;
+mod parser;
+mod region;
 
-use clap::Parser;
-use vm::OpCode;
+// TODO
+//
+// 1. Support loading directories.
+// 2. Parse all files into VmFile struct that contains the file name and list of
+//    opcodes.
+// 3. Translate each opcode into assembly.
 
 fn main() -> eyre::Result<()> {
+    use clap::Parser;
+
+    use crate::opcode::Counter;
+    use crate::parser::VmFile;
+
     // Parse command line args.
     let args = args::Args::parse();
 
-    // Load file & parse all lines.
-    let input = std::fs::read_to_string(args.file)?;
-    let opcodes = input
-        .lines()
-        .map(|line| line.trim())
-        .enumerate()
-        .filter(|(_, line)| !line.is_empty() && !line.starts_with("//"))
-        .map(|(number, source)| (number + 1, source.to_owned(), source.parse::<OpCode>()));
+    // Load & parse all provided files.
+    let files = match args.path.is_dir() {
+        true => std::fs::read_dir(&args.path)
+            .unwrap()
+            .map(|res| VmFile::parse_file(res.unwrap().path()))
+            .collect(),
+        false => vec![VmFile::parse_file(args.path)],
+    };
+
+    // TODO: Handle multi files.
+    let [file] = &files[..] else {
+        panic!();
+    };
 
     // Generate hack assembly for all parsed lines.
-    let mut label_counter = vm::Counter::default();
-    for (line, source, res) in opcodes {
+    let mut label_counter = Counter::default();
+    for (line, source, res) in &file.opcodes {
         let hack = match res {
             Ok(hack) => hack,
             Err(err) => {

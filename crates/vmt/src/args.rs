@@ -6,5 +6,5 @@ use clap::Parser;
 #[command(author, version, about, long_about = None)]
 #[command(propagate_version = true)]
 pub(crate) struct Args {
-    pub(crate) file: PathBuf,
+    pub(crate) path: PathBuf,
 }

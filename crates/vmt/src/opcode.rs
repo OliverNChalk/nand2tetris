@@ -3,13 +3,13 @@ use std::str::FromStr;
 use shared::hack;
 use thiserror::Error;
 
-use super::RegionType;
+use crate::region::{Region, RegionType};
 
 #[derive(Debug)]
 pub(crate) enum OpCode {
     // Memory access
-    Push(super::Region, u16),
-    Pop(super::Region, u16),
+    Push(Region, u16),
+    Pop(Region, u16),
 
     // Arithmetic
     Add,
