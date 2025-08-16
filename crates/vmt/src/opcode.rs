@@ -14,6 +14,7 @@ pub(crate) enum OpCode {
 
     // Control flow.
     Label(String),
+    Goto(String),
     IfGoto(String),
 
     // Arithmetic
@@ -102,6 +103,7 @@ impl OpCode {
                     .collect(),
             },
             OpCode::Label(label) => vec![hack!("({label})")],
+            OpCode::Goto(label) => vec![hack!("@{label}"), hack!("0;JMP")],
             OpCode::IfGoto(label) => Self::decrement_stack()
                 .into_iter()
                 .chain(Self::read_head())
@@ -275,6 +277,12 @@ impl FromStr for OpCode {
                 Ok(OpCode::Pop(region, index))
             }
             "label" => Ok(OpCode::Label(
+                words
+                    .next()
+                    .ok_or_else(|| ParseOpCodeErr::ArgumentCount(s.to_owned()))?
+                    .to_string(),
+            )),
+            "goto" => Ok(OpCode::Goto(
                 words
                     .next()
                     .ok_or_else(|| ParseOpCodeErr::ArgumentCount(s.to_owned()))?
