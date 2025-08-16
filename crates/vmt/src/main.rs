@@ -13,7 +13,7 @@ mod region;
 fn main() -> eyre::Result<()> {
     use clap::Parser;
 
-    use crate::opcode::Counter;
+    use crate::opcode::LabelCounter;
     use crate::parser::VmFile;
 
     // Parse command line args.
@@ -29,7 +29,7 @@ fn main() -> eyre::Result<()> {
     };
 
     // Generate hack assembly for all parsed lines.
-    let mut label_counter = Counter::default();
+    let mut label_counter = LabelCounter::default();
     for (_, (line, source, res)) in files
         .iter()
         .flat_map(|file| file.opcodes.iter().map(|opcode| (&file.path, opcode)))
