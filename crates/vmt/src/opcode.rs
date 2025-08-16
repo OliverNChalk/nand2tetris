@@ -1,15 +1,20 @@
+use std::num::ParseIntError;
 use std::str::FromStr;
 
 use shared::hack;
 use thiserror::Error;
 
-use super::RegionType;
+use crate::region::{Region, RegionType};
 
 #[derive(Debug)]
 pub(crate) enum OpCode {
     // Memory access
-    Push(super::Region, u16),
-    Pop(super::Region, u16),
+    Push(Region, u16),
+    Pop(Region, u16),
+
+    // Control flow.
+    Label(String),
+    IfGoto(String),
 
     // Arithmetic
     Add,
@@ -30,7 +35,7 @@ pub(crate) enum OpCode {
 }
 
 impl OpCode {
-    pub(crate) fn bytecode(&self, label_counter: &mut Counter) -> Vec<hack::Instruction> {
+    pub(crate) fn bytecode(&self, label_counter: &mut LabelCounter) -> Vec<hack::Instruction> {
         match self {
             OpCode::Push(region, index) => match region.offset() {
                 RegionType::Constant => {
@@ -96,6 +101,12 @@ impl OpCode {
                     .chain([hack!("@{}", offset + index), hack!("M=D")])
                     .collect(),
             },
+            OpCode::Label(label) => vec![hack!("({label})")],
+            OpCode::IfGoto(label) => Self::decrement_stack()
+                .into_iter()
+                .chain(Self::read_head())
+                .chain([hack!("@{label}"), hack!("D;JNE")])
+                .collect(),
             OpCode::Add => Self::decrement_stack()
                 .into_iter()
                 .chain(Self::read_head())
@@ -177,7 +188,7 @@ impl OpCode {
         [hack::Instruction::A(hack::Location::Address(0)), hack!("M=M-1")]
     }
 
-    fn compare(branch: hack::Branch, label_counter: &mut Counter) -> Vec<hack::Instruction> {
+    fn compare(branch: hack::Branch, label_counter: &mut LabelCounter) -> Vec<hack::Instruction> {
         let true_branch = format!("LOW_LEVEL_LABEL{}", label_counter.inc());
         let continue_branch = format!("LOW_LEVEL_LABEL{}", label_counter.inc());
 
@@ -220,9 +231,9 @@ pub(crate) enum ParseOpCodeErr {
     #[error("Invalid argument count; line={0}")]
     ArgumentCount(String),
     #[error("Invalid region; line={0}")]
-    Region(#[from] strum::ParseError),
-    #[error("Invalid index; line={0}")]
-    Index(std::num::ParseIntError),
+    Region(String),
+    #[error("Invalid index; line={0}; err={1}")]
+    Index(String, ParseIntError),
 }
 
 impl FromStr for OpCode {
@@ -237,12 +248,14 @@ impl FromStr for OpCode {
                 let region = words
                     .next()
                     .ok_or_else(|| ParseOpCodeErr::ArgumentCount(s.to_owned()))?
-                    .parse()?;
+                    .parse()
+                    .map_err(|_| ParseOpCodeErr::Region(s.to_string()))?;
                 let index = words
                     .next()
-                    .ok_or_else(|| ParseOpCodeErr::ArgumentCount(s.to_owned()))?
+                    .ok_or_else(|| ParseOpCodeErr::ArgumentCount(s.to_owned()))?;
+                let index = index
                     .parse()
-                    .map_err(ParseOpCodeErr::Index)?;
+                    .map_err(|err| ParseOpCodeErr::Index(index.to_string(), err))?;
 
                 Ok(OpCode::Push(region, index))
             }
@@ -250,15 +263,29 @@ impl FromStr for OpCode {
                 let region = words
                     .next()
                     .ok_or_else(|| ParseOpCodeErr::ArgumentCount(s.to_owned()))?
-                    .parse()?;
+                    .parse()
+                    .map_err(|_| ParseOpCodeErr::Region(s.to_string()))?;
                 let index = words
                     .next()
-                    .ok_or_else(|| ParseOpCodeErr::ArgumentCount(s.to_owned()))?
+                    .ok_or_else(|| ParseOpCodeErr::ArgumentCount(s.to_owned()))?;
+                let index = index
                     .parse()
-                    .map_err(ParseOpCodeErr::Index)?;
+                    .map_err(|err| ParseOpCodeErr::Index(index.to_string(), err))?;
 
                 Ok(OpCode::Pop(region, index))
             }
+            "label" => Ok(OpCode::Label(
+                words
+                    .next()
+                    .ok_or_else(|| ParseOpCodeErr::ArgumentCount(s.to_owned()))?
+                    .to_string(),
+            )),
+            "if-goto" => Ok(OpCode::IfGoto(
+                words
+                    .next()
+                    .ok_or_else(|| ParseOpCodeErr::ArgumentCount(s.to_owned()))?
+                    .to_string(),
+            )),
             "add" => Ok(OpCode::Add),
             "sub" => Ok(OpCode::Sub),
             "neg" => Ok(OpCode::Neg),
@@ -275,14 +302,15 @@ impl FromStr for OpCode {
     }
 }
 
-#[derive(Default)]
-pub(crate) struct Counter {
-    count: u32,
+#[derive(Debug, Default)]
+pub(crate) struct LabelCounter {
+    count: u64,
 }
 
-impl Counter {
-    pub fn inc(&mut self) -> u32 {
+impl LabelCounter {
+    pub fn inc(&mut self) -> u64 {
         self.count += 1;
+
         self.count
     }
 }

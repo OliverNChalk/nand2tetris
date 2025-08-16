@@ -1,25 +1,32 @@
-mod opts;
-mod vm;
-
-use clap::Parser;
-use vm::OpCode;
+mod args;
+mod opcode;
+mod parser;
+mod region;
 
 fn main() -> eyre::Result<()> {
-    // Parse command line args.
-    let opts = opts::Opts::parse();
+    use clap::Parser;
 
-    // Load file & parse all lines.
-    let input = std::fs::read_to_string(opts.file)?;
-    let opcodes = input
-        .lines()
-        .map(|line| line.trim())
-        .enumerate()
-        .filter(|(_, line)| !line.is_empty() && !line.starts_with("//"))
-        .map(|(number, source)| (number + 1, source.to_owned(), source.parse::<OpCode>()));
+    use crate::opcode::LabelCounter;
+    use crate::parser::VmFile;
+
+    // Parse command line args.
+    let args = args::Args::parse();
+
+    // Load & parse all provided files.
+    let files = match args.path.is_dir() {
+        true => std::fs::read_dir(&args.path)
+            .unwrap()
+            .map(|res| VmFile::parse_file(res.unwrap().path()))
+            .collect(),
+        false => vec![VmFile::parse_file(args.path)],
+    };
 
     // Generate hack assembly for all parsed lines.
-    let mut label_counter = vm::Counter::default();
-    for (line, source, res) in opcodes {
+    let mut label_counter = LabelCounter::default();
+    for (_, (line, source, res)) in files
+        .iter()
+        .flat_map(|file| file.opcodes.iter().map(|opcode| (&file.path, opcode)))
+    {
         let hack = match res {
             Ok(hack) => hack,
             Err(err) => {
