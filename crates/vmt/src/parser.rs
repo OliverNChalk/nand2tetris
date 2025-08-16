@@ -12,9 +12,14 @@ impl VmFile {
         let opcodes = std::fs::read_to_string(&path)
             .unwrap()
             .lines()
-            .map(|line| line.trim())
+            .map(|line| {
+                line.split_once("//")
+                    .map(|(left, _)| left)
+                    .unwrap_or(line)
+                    .trim()
+            })
             .enumerate()
-            .filter(|(_, line)| !line.is_empty() && !line.starts_with("//"))
+            .filter(|(_, line)| !line.is_empty())
             .map(|(number, source)| (number + 1, source.to_owned(), source.parse::<OpCode>()))
             .collect();
 

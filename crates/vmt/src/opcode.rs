@@ -1,3 +1,4 @@
+use std::num::ParseIntError;
 use std::str::FromStr;
 
 use shared::hack;
@@ -104,7 +105,7 @@ impl OpCode {
             OpCode::IfGoto(label) => Self::decrement_stack()
                 .into_iter()
                 .chain(Self::read_head())
-                .chain([hack!("D=M"), hack!("@{label}"), hack!("D;JNE")])
+                .chain([hack!("@{label}"), hack!("D;JNE")])
                 .collect(),
             OpCode::Add => Self::decrement_stack()
                 .into_iter()
@@ -230,9 +231,9 @@ pub(crate) enum ParseOpCodeErr {
     #[error("Invalid argument count; line={0}")]
     ArgumentCount(String),
     #[error("Invalid region; line={0}")]
-    Region(#[from] strum::ParseError),
-    #[error("Invalid index; line={0}")]
-    Index(std::num::ParseIntError),
+    Region(String),
+    #[error("Invalid index; line={0}; err={1}")]
+    Index(String, ParseIntError),
 }
 
 impl FromStr for OpCode {
@@ -247,12 +248,14 @@ impl FromStr for OpCode {
                 let region = words
                     .next()
                     .ok_or_else(|| ParseOpCodeErr::ArgumentCount(s.to_owned()))?
-                    .parse()?;
+                    .parse()
+                    .map_err(|_| ParseOpCodeErr::Region(s.to_string()))?;
                 let index = words
                     .next()
-                    .ok_or_else(|| ParseOpCodeErr::ArgumentCount(s.to_owned()))?
+                    .ok_or_else(|| ParseOpCodeErr::ArgumentCount(s.to_owned()))?;
+                let index = index
                     .parse()
-                    .map_err(ParseOpCodeErr::Index)?;
+                    .map_err(|err| ParseOpCodeErr::Index(index.to_string(), err))?;
 
                 Ok(OpCode::Push(region, index))
             }
@@ -260,12 +263,14 @@ impl FromStr for OpCode {
                 let region = words
                     .next()
                     .ok_or_else(|| ParseOpCodeErr::ArgumentCount(s.to_owned()))?
-                    .parse()?;
+                    .parse()
+                    .map_err(|_| ParseOpCodeErr::Region(s.to_string()))?;
                 let index = words
                     .next()
-                    .ok_or_else(|| ParseOpCodeErr::ArgumentCount(s.to_owned()))?
+                    .ok_or_else(|| ParseOpCodeErr::ArgumentCount(s.to_owned()))?;
+                let index = index
                     .parse()
-                    .map_err(ParseOpCodeErr::Index)?;
+                    .map_err(|err| ParseOpCodeErr::Index(index.to_string(), err))?;
 
                 Ok(OpCode::Pop(region, index))
             }
@@ -304,9 +309,8 @@ pub(crate) struct LabelCounter {
 
 impl LabelCounter {
     pub fn inc(&mut self) -> u64 {
-        let count = self.count;
         self.count += 1;
 
-        count
+        self.count
     }
 }
