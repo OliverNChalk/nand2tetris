@@ -1,4 +1,4 @@
-mod opts;
+mod args;
 mod vm;
 
 use clap::Parser;
@@ -6,10 +6,10 @@ use vm::OpCode;
 
 fn main() -> eyre::Result<()> {
     // Parse command line args.
-    let opts = opts::Opts::parse();
+    let args = args::Args::parse();
 
     // Load file & parse all lines.
-    let input = std::fs::read_to_string(opts.file)?;
+    let input = std::fs::read_to_string(args.file)?;
     let opcodes = input
         .lines()
         .map(|line| line.trim())
