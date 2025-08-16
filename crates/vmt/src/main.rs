@@ -28,14 +28,12 @@ fn main() -> eyre::Result<()> {
         false => vec![VmFile::parse_file(args.path)],
     };
 
-    // TODO: Handle multi files.
-    let [file] = &files[..] else {
-        panic!();
-    };
-
     // Generate hack assembly for all parsed lines.
     let mut label_counter = Counter::default();
-    for (line, source, res) in &file.opcodes {
+    for (_, (line, source, res)) in files
+        .iter()
+        .flat_map(|file| file.opcodes.iter().map(|opcode| (&file.path, opcode)))
+    {
         let hack = match res {
             Ok(hack) => hack,
             Err(err) => {
