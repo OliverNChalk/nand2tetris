@@ -57,7 +57,7 @@ impl Writer {
     }
 
     fn bootstrap_code(label_counter: &mut LabelCounter) -> impl Iterator<Item = hack::Instruction> {
-        [hack!("@256"), hack!("D=M"), hack!("@SP"), hack!("M=D")]
+        [hack!("@256"), hack!("D=A"), hack!("@SP"), hack!("M=D")]
             .into_iter()
             .chain(OpCode::Call { name: "Sys.init".to_string(), args: 0 }.bytecode(label_counter))
     }
