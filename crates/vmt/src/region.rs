@@ -1,10 +1,3 @@
-#[derive(Debug)]
-pub(crate) enum RegionType {
-    Constant,
-    Fixed(u16),
-    Dynamic(u16),
-}
-
 #[derive(Debug, strum::EnumString)]
 #[strum(serialize_all = "lowercase")]
 pub(crate) enum Region {
@@ -19,16 +12,23 @@ pub(crate) enum Region {
 }
 
 impl Region {
-    pub(crate) fn offset(&self) -> RegionType {
+    pub(crate) fn offset(&self, static_offset: u16) -> OffsetType {
         match self {
-            Region::Constant => RegionType::Constant,
-            Region::Pointer => RegionType::Fixed(3),
-            Region::Temp => RegionType::Fixed(5),
-            Region::Static => RegionType::Fixed(16),
-            Region::Local => RegionType::Dynamic(1),
-            Region::Argument => RegionType::Dynamic(2),
-            Region::This => RegionType::Dynamic(3),
-            Region::That => RegionType::Dynamic(4),
+            Region::Constant => OffsetType::Constant,
+            Region::Pointer => OffsetType::Fixed(3),
+            Region::Temp => OffsetType::Fixed(5),
+            Region::Static => OffsetType::Fixed(16 + static_offset),
+            Region::Local => OffsetType::Dynamic(1),
+            Region::Argument => OffsetType::Dynamic(2),
+            Region::This => OffsetType::Dynamic(3),
+            Region::That => OffsetType::Dynamic(4),
         }
     }
+}
+
+#[derive(Debug)]
+pub(crate) enum OffsetType {
+    Constant,
+    Fixed(u16),
+    Dynamic(u16),
 }

@@ -4,7 +4,7 @@ use std::str::FromStr;
 use shared::hack;
 use thiserror::Error;
 
-use crate::region::{Region, RegionType};
+use crate::region::{OffsetType, Region};
 
 #[derive(Debug)]
 pub(crate) enum OpCode {
@@ -41,17 +41,21 @@ pub(crate) enum OpCode {
 }
 
 impl OpCode {
-    pub(crate) fn bytecode(&self, label_counter: &mut LabelCounter) -> Vec<hack::Instruction> {
+    pub(crate) fn bytecode(
+        &self,
+        label_counter: &mut LabelCounter,
+        static_offset: u16,
+    ) -> Vec<hack::Instruction> {
         match self {
-            OpCode::Push(region, index) => match region.offset() {
-                RegionType::Constant => {
+            OpCode::Push(region, index) => match region.offset(static_offset) {
+                OffsetType::Constant => {
                     [hack::Instruction::A(hack::Location::Address(*index)), hack!("D=A")]
                         .into_iter()
                         .chain(Self::write_head())
                         .chain(Self::increment_stack())
                         .collect()
                 }
-                RegionType::Fixed(offset) => {
+                OffsetType::Fixed(offset) => {
                     [hack::Instruction::A(hack::Location::Address(offset + index)), hack!("D=M")]
                         .into_iter()
                         .chain(Self::write_head())
@@ -59,7 +63,7 @@ impl OpCode {
                         .collect()
                 }
 
-                RegionType::Dynamic(offset) => [
+                OffsetType::Dynamic(offset) => [
                     hack!("@{offset}"),
                     hack!("D=M"),
                     hack!("@{index}"),
@@ -72,9 +76,9 @@ impl OpCode {
                 .chain(Self::increment_stack())
                 .collect(),
             },
-            OpCode::Pop(region, index) => match region.offset() {
-                RegionType::Constant => panic!("Cannot pop to constant"),
-                RegionType::Dynamic(offset) => Self::decrement_stack()
+            OpCode::Pop(region, index) => match region.offset(static_offset) {
+                OffsetType::Constant => panic!("Cannot pop to constant"),
+                OffsetType::Dynamic(offset) => Self::decrement_stack()
                     .into_iter()
                     .chain(Self::read_head())
                     // TODO: This seems suboptimal, was lifted from old impl.
@@ -101,7 +105,7 @@ impl OpCode {
                         hack!("M=D"),
                     ])
                     .collect(),
-                RegionType::Fixed(offset) => Self::decrement_stack()
+                OffsetType::Fixed(offset) => Self::decrement_stack()
                     .into_iter()
                     .chain(Self::read_head())
                     .chain([hack!("@{}", offset + index), hack!("M=D")])

@@ -19,9 +19,9 @@ fn main() {
             .unwrap()
             .map(|res| res.unwrap().path())
             .filter(|path| path.extension().and_then(|ext| ext.to_str()) == Some("vm"))
-            .map(VmFile::parse_file)
+            .map(|path| VmFile::parse_file(&path))
             .collect(),
-        false => vec![VmFile::parse_file(args.path)],
+        false => vec![VmFile::parse_file(&args.path)],
     };
 
     // Setup the code writer.
