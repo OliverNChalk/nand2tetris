@@ -1,3 +1,55 @@
+@256
+D=A
+@0
+M=D
+@Sys.init.1.ret
+D=A
+@0
+A=M
+M=D
+@0
+M=M+1
+@1
+D=M
+@0
+A=M
+M=D
+@0
+M=M+1
+@2
+D=M
+@0
+A=M
+M=D
+@0
+M=M+1
+@3
+D=M
+@0
+A=M
+M=D
+@0
+M=M+1
+@4
+D=M
+@0
+A=M
+M=D
+@0
+M=M+1
+@5
+D=A
+@0
+D=M-D
+@2
+M=D
+@0
+D=M
+@1
+M=D
+@Sys.init
+0;JMP
+(Sys.init.1.ret)
 // L8: function Sys.init 0
 (Sys.init)
 // L9: push constant 4000
@@ -31,7 +83,7 @@ D=M
 @4
 M=D
 // L13: call Sys.main 0
-@Sys.main.1.ret
+@Sys.main.2.ret
 D=A
 @0
 A=M
@@ -78,7 +130,7 @@ D=M
 M=D
 @Sys.main
 0;JMP
-(Sys.main.1.ret)
+(Sys.main.2.ret)
 // L14: pop temp 1
 @0
 M=M-1
@@ -240,7 +292,7 @@ M=D
 @0
 M=M+1
 // L38: call Sys.add12 1
-@Sys.add12.2.ret
+@Sys.add12.3.ret
 D=A
 @0
 A=M
@@ -287,7 +339,7 @@ D=M
 M=D
 @Sys.add12
 0;JMP
-(Sys.add12.2.ret)
+(Sys.add12.3.ret)
 // L39: pop temp 0
 @0
 M=M-1

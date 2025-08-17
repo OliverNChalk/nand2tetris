@@ -2,8 +2,14 @@
 (SimpleFunction.test)
 D=0
 @0
+A=M
+M=D
+@0
 M=M+1
 D=0
+@0
+A=M
+M=D
 @0
 M=M+1
 // L8: push local 0
@@ -111,6 +117,14 @@ M=M+1
 D=M
 @10
 M=D
+@1
+D=M
+@5
+D=D-A
+A=D
+D=M
+@11
+M=D
 @0
 M=M-1
 A=M
@@ -146,7 +160,6 @@ A=M
 D=M
 @1
 M=D
-@10
-M=M-1
+@11
 A=M
 0;JMP
