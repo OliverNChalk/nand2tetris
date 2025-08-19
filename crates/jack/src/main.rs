@@ -1,3 +1,5 @@
+use std::io::BufWriter;
+
 use crate::tokenizer::Tokenizer;
 
 mod args;
@@ -15,7 +17,9 @@ fn main() {
     // Create a tokenizer.
     let tokenizer = Tokenizer::new(&source);
 
+    let stdout = std::io::stdout().lock();
+    let mut output = BufWriter::new(stdout);
     for token in tokenizer {
-        println!("TOKEN: {:?}", token.unwrap());
+        token.unwrap().write_xml(&mut output);
     }
 }

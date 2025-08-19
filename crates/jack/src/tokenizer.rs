@@ -1,3 +1,7 @@
+use std::io::Write;
+
+use strum::IntoStaticStr;
+
 pub(crate) struct Tokenizer<'a> {
     source: &'a str,
     errored: bool,
@@ -305,7 +309,33 @@ pub(crate) enum Token<'a> {
     StringLiteral(&'a str),
 }
 
-#[derive(Debug)]
+impl<'a> Token<'a> {
+    pub(crate) fn write_xml(&self, wx: &mut impl Write) {
+        match self {
+            Self::Keyword(keyword) => {
+                write!(wx, "<keyword> ").unwrap();
+                keyword.write_xml(wx);
+                write!(wx, " </keyword>").unwrap();
+            }
+            Self::Symbol(symbol) => {
+                write!(wx, "<symbol> ").unwrap();
+                symbol.write_xml(wx);
+                write!(wx, " </symbol>").unwrap();
+            }
+            Self::Identifier(identifier) => {
+                write!(wx, "<identifier> {identifier} </identifier>").unwrap();
+            }
+            Self::IntegerLiteral(literal) => {
+                write!(wx, "<integerConstant> {literal} </integerConstant>").unwrap();
+            }
+            Self::StringLiteral(literal) => {
+                write!(wx, "<stringConstant> {literal} </stringConstant>").unwrap();
+            }
+        }
+    }
+}
+
+#[derive(Debug, IntoStaticStr)]
 pub(crate) enum Keyword {
     Class,
     Constructor,
@@ -330,7 +360,13 @@ pub(crate) enum Keyword {
     Return,
 }
 
-#[derive(Debug)]
+impl Keyword {
+    fn write_xml(&self, wx: &mut impl Write) {
+        wx.write_all(<&str>::from(self).as_bytes()).unwrap();
+    }
+}
+
+#[derive(Debug, IntoStaticStr)]
 pub(crate) enum Symbol {
     LeftBrace,
     RightBrace,
@@ -351,4 +387,10 @@ pub(crate) enum Symbol {
     RightAngleBracket,
     Equals,
     Tilde,
+}
+
+impl Symbol {
+    fn write_xml(&self, wx: &mut impl Write) {
+        wx.write_all(<&str>::from(self).as_bytes()).unwrap();
+    }
 }
