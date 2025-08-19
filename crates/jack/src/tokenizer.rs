@@ -123,12 +123,14 @@ impl<'a> Iterator for Tokenizer<'a> {
 
             // If this is a single line comment, skip it.
             if source.get(0..2).is_some_and(|chars| chars == b"//") {
-                self.source = source
-                    .iter()
-                    .position(|byte| byte == &b'\n')
-                    .map_or(&self.source[0..0], |pos| unsafe {
-                        core::str::from_utf8_unchecked(&self.source.as_bytes()[pos..])
-                    });
+                self.source = source.iter().position(|byte| byte == &b'\n').map_or(
+                    &self.source[0..0],
+                    |pos| {
+                        // SAFETY: As we have found a valid ASCII byte, we can be sure this byte
+                        // does not belong to some multi-byte UTF-8 char.
+                        unsafe { core::str::from_utf8_unchecked(&self.source.as_bytes()[pos..]) }
+                    },
+                );
 
                 continue;
             }
