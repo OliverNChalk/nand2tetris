@@ -1,4 +1,4 @@
-use std::io::BufWriter;
+use std::io::{BufWriter, Write};
 
 use crate::tokenizer::Tokenizer;
 
@@ -21,5 +21,6 @@ fn main() {
     let mut output = BufWriter::new(stdout);
     for token in tokenizer {
         token.unwrap().write_xml(&mut output);
+        writeln!(output).unwrap();
     }
 }
