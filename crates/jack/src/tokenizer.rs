@@ -79,19 +79,37 @@ impl<'a> Tokenizer<'a> {
             _ => return None,
         };
 
-        // SAFETY: Assuming the `word()` method returns the first word in the string,
-        // then because we passed the above match clause we can no for certain that the
-        // it is safe to trim the first N bytes as they are all ascii and no character
-        // splitting can occur.
+        // SAFETY: As we know `word` to be valid UTF8, we can safely trim the entire
+        // word without splitting a UTF-8 char boundary.
         self.source =
             unsafe { core::str::from_utf8_unchecked(&self.source.as_bytes()[word.len()..]) };
 
         Some(keyword)
     }
+
+    fn try_parse_identifier(&mut self) -> Option<&'a str> {
+        debug_assert!(self.source.as_bytes()[0] != b' ');
+
+        // Bail if any chars are invalid for an identifier.
+        let word = self.word();
+        if !word
+            .chars()
+            .all(|char| char.is_alphanumeric() || char == '_')
+        {
+            return None;
+        }
+
+        // SAFETY: As we know `word` to be valid UTF8, we can safely trim the entire
+        // word without splitting a UTF-8 char boundary.
+        self.source =
+            unsafe { core::str::from_utf8_unchecked(&self.source.as_bytes()[word.len()..]) };
+
+        Some(word)
+    }
 }
 
 impl<'a> Iterator for Tokenizer<'a> {
-    type Item = Result<Token, TokenizeError>;
+    type Item = Result<Token<'a>, TokenizeError>;
 
     fn next(&mut self) -> Option<Self::Item> {
         // Fuse ourselves if we have errored to prevent callers from suppressing errors
@@ -163,6 +181,11 @@ impl<'a> Iterator for Tokenizer<'a> {
                 return Some(Ok(Token::Keyword(keyword)));
             }
 
+            // Try eat an identifier.
+            if let Some(identifier) = self.try_parse_identifier() {
+                return Some(Ok(Token::Identifier(identifier)));
+            }
+
             todo!()
         }
     }
@@ -174,9 +197,10 @@ pub(crate) enum TokenizeError {
 }
 
 #[derive(Debug)]
-pub(crate) enum Token {
+pub(crate) enum Token<'a> {
     Keyword(Keyword),
     Symbol(Symbol),
+    Identifier(&'a str),
 }
 
 #[derive(Debug)]
