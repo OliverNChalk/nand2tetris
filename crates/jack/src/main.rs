@@ -1,3 +1,5 @@
+use crate::tokenizer::Tokenizer;
+
 mod args;
 mod tokenizer;
 
@@ -7,5 +9,13 @@ fn main() {
     // Parse command line args.
     let args = args::Args::parse();
 
-    println!("COMING SOON");
+    // Read the source file into memory.
+    let source = std::fs::read_to_string(&args.path).unwrap();
+
+    // Create a tokenizer.
+    let tokenizer = Tokenizer::new(&source);
+
+    for token in tokenizer {
+        println!("TOKEN: {:?}", token.unwrap());
+    }
 }
