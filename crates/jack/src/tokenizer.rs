@@ -8,16 +8,6 @@ impl<'a> Tokenizer<'a> {
         Self { source, errored: false }
     }
 
-    fn word(&self) -> &'a str {
-        match self.source.as_bytes().iter().position(|byte| byte == &b' ') {
-            // SAFETY: As no ASCII characters overlap with UTF8 multi byte characters, we can
-            // safely assume that if we find a space and then index that space,
-            // we will not be splitting any UTF-8 chars.
-            Some(end) => unsafe { core::str::from_utf8_unchecked(&self.source.as_bytes()[..end]) },
-            None => self.source,
-        }
-    }
-
     fn try_parse_symbol(&mut self) -> Option<Symbol> {
         debug_assert!(self.source.as_bytes()[0] != b' ');
 
@@ -53,7 +43,15 @@ impl<'a> Tokenizer<'a> {
     fn try_parse_keyword(&mut self) -> Option<Keyword> {
         debug_assert!(self.source.as_bytes()[0] != b' ');
 
-        let word = self.word();
+        // Keywords are terminated by a space.
+        let word = match self.source.as_bytes().iter().position(|byte| byte == &b' ') {
+            // SAFETY: As no ASCII characters overlap with UTF8 multi byte characters, we can
+            // safely assume that if we find a space and then index that space, we will not be
+            // splitting any UTF-8 chars.
+            Some(end) => unsafe { core::str::from_utf8_unchecked(&self.source.as_bytes()[..end]) },
+            None => self.source,
+        };
+
         let keyword = match word {
             "class" => Keyword::Class,
             "constructor" => Keyword::Constructor,
@@ -90,21 +88,113 @@ impl<'a> Tokenizer<'a> {
     fn try_parse_identifier(&mut self) -> Option<&'a str> {
         debug_assert!(self.source.as_bytes()[0] != b' ');
 
-        // Bail if any chars are invalid for an identifier.
-        let word = self.word();
-        if !word
-            .chars()
-            .all(|char| char.is_alphanumeric() || char == '_')
+        // Identifiers cannot start with a digit.
+        if self.source.as_bytes()[0].is_ascii_digit() {
+            return None;
+        }
+
+        // Identifiers can be terminated by various symbols.
+        let identifier = match self
+            .source
+            .as_bytes()
+            .iter()
+            .position(|byte| !byte.is_ascii_alphanumeric() && byte != &b'_')
         {
+            // SAFETY: As no ASCII characters overlap with UTF8 multi byte characters, we can
+            // safely assume that if we find a space and then index that space, we will not be
+            // splitting any UTF-8 chars.
+            Some(end) => unsafe { core::str::from_utf8_unchecked(&self.source.as_bytes()[..end]) },
+            None => self.source,
+        };
+
+        // Bail if we could not extract a valid identifier.
+        if identifier.is_empty() {
             return None;
         }
 
         // SAFETY: As we know `word` to be valid UTF8, we can safely trim the entire
         // word without splitting a UTF-8 char boundary.
         self.source =
-            unsafe { core::str::from_utf8_unchecked(&self.source.as_bytes()[word.len()..]) };
+            unsafe { core::str::from_utf8_unchecked(&self.source.as_bytes()[identifier.len()..]) };
 
-        Some(word)
+        Some(identifier)
+    }
+
+    fn try_parse_integer_literal(&mut self) -> Option<i16> {
+        debug_assert!(self.source.as_bytes()[0] != b' ');
+
+        // Integer literals must contain only digits.
+        let literal_s = match self
+            .source
+            .as_bytes()
+            .iter()
+            .position(|byte| !byte.is_ascii_digit())
+        {
+            // SAFETY: As no ASCII characters overlap with UTF8 multi byte characters, we can
+            // safely assume that if we find a space and then index that space, we will not be
+            // splitting any UTF-8 chars.
+            Some(end) => unsafe { core::str::from_utf8_unchecked(&self.source.as_bytes()[..end]) },
+            None => self.source,
+        };
+
+        // If we have no digits then this cannot be an integer literal.
+        if literal_s.is_empty() {
+            return None;
+        }
+
+        // Jack integers are 16bit signed values but only the 0 & positive integers are
+        // usable, thus the range is 0..2**15.
+        let Ok(literal) = literal_s.parse::<i16>() else {
+            todo!("Invalid jack integer literal");
+        };
+
+        // Jack integers literals cannot be negative.
+        assert!(!literal.is_negative());
+
+        // SAFETY: As we know `word` to be valid UTF8, we can safely trim the entire
+        // word without splitting a UTF-8 char boundary.
+        self.source =
+            unsafe { core::str::from_utf8_unchecked(&self.source.as_bytes()[literal_s.len()..]) };
+
+        Some(literal)
+    }
+
+    fn try_parse_string_literal(&mut self) -> Option<&'a str> {
+        debug_assert!(self.source.as_bytes()[0] != b' ');
+
+        // String literals must start with a double quote.
+        if self.source.as_bytes()[0] != b'"' {
+            return None;
+        }
+
+        // String literals are terminated by a double quote.
+        let literal = match self
+            .source
+            .as_bytes()
+            .iter()
+            .skip(1)
+            .position(|byte| byte == &b'"')
+        {
+            // SAFETY: As no ASCII characters overlap with UTF8 multi byte characters, we can
+            // safely assume that if we find a space and then index that space, we will not be
+            // splitting any UTF-8 chars.
+            Some(end) => unsafe {
+                core::str::from_utf8_unchecked(&self.source.as_bytes()[..(end + 2)])
+            },
+            None => self.source,
+        };
+        assert!(!literal.is_empty());
+
+        if literal.bytes().any(|byte| byte == b'\n') {
+            todo!("Jack specification forbids newlines in string literals");
+        }
+
+        // SAFETY: As we know `word` to be valid UTF8, we can safely trim the entire
+        // word without splitting a UTF-8 char boundary.
+        self.source =
+            unsafe { core::str::from_utf8_unchecked(&self.source.as_bytes()[literal.len()..]) };
+
+        Some(literal)
     }
 }
 
@@ -186,6 +276,16 @@ impl<'a> Iterator for Tokenizer<'a> {
                 return Some(Ok(Token::Identifier(identifier)));
             }
 
+            // Try eat an integer literal.
+            if let Some(literal) = self.try_parse_integer_literal() {
+                return Some(Ok(Token::IntegerLiteral(literal)));
+            }
+
+            // Try eat a string literal.
+            if let Some(literal) = self.try_parse_string_literal() {
+                return Some(Ok(Token::StringLiteral(literal)));
+            }
+
             todo!()
         }
     }
@@ -201,6 +301,8 @@ pub(crate) enum Token<'a> {
     Keyword(Keyword),
     Symbol(Symbol),
     Identifier(&'a str),
+    IntegerLiteral(i16),
+    StringLiteral(&'a str),
 }
 
 #[derive(Debug)]
