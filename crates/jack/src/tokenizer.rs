@@ -286,7 +286,7 @@ impl<'a> Iterator for Tokenizer<'a> {
                 return Some(Ok(Token::StringLiteral(literal)));
             }
 
-            todo!()
+            todo!("Could not parse a token");
         }
     }
 }
