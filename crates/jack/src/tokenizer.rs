@@ -50,12 +50,14 @@ impl<'a> Tokenizer<'a> {
     fn try_parse_keyword(&mut self) -> Option<SourceToken<'a>> {
         debug_assert!(self.source.as_bytes()[0] != b' ');
 
-        // Keywords are terminated by a space.
-        let word = match self.source.as_bytes().iter().position(|byte| byte == &b' ') {
-            // SAFETY: As no ASCII characters overlap with UTF8 multi byte characters, we can
-            // safely assume that if we find a space and then index that space, we will not be
-            // splitting any UTF-8 chars.
-            Some(end) => unsafe { core::str::from_utf8_unchecked(&self.source.as_bytes()[..end]) },
+        // Keywords contain only alphabetical characters.
+        let word = match self
+            .source
+            .as_bytes()
+            .iter()
+            .position(|byte| !byte.is_ascii_alphabetic())
+        {
+            Some(end) => &self.source[..end],
             None => self.source,
         };
 
