@@ -4,6 +4,7 @@
 use std::io::Write;
 
 use strum::IntoStaticStr;
+use thiserror::Error;
 
 pub(crate) struct Tokenizer<'a> {
     source: &'a str,
@@ -311,11 +312,13 @@ impl<'a> Iterator for Tokenizer<'a> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, Error)]
 pub(crate) enum TokenizeError {
+    #[error("Unclosed comment")]
     UnclosedComment,
 }
 
+#[derive(Debug)]
 pub(crate) struct SourceToken<'a> {
     pub(crate) source: &'a str,
     pub(crate) token: Token,
