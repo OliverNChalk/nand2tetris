@@ -329,6 +329,7 @@ impl<'a> SourceToken<'a> {
             Token::Symbol(symbol) => {
                 write!(wx, "<symbol> ").unwrap();
                 match symbol {
+                    Symbol::Ampersand => write!(wx, "&amp;"),
                     Symbol::LeftAngleBracket => write!(wx, "&lt;"),
                     Symbol::RightAngleBracket => write!(wx, "&gt;"),
                     _ => write!(wx, "{source}"),
