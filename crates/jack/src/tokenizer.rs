@@ -317,8 +317,8 @@ pub(crate) enum TokenizeError {
 }
 
 pub(crate) struct SourceToken<'a> {
-    source: &'a str,
-    token: Token,
+    pub(crate) source: &'a str,
+    pub(crate) token: Token,
 }
 
 impl<'a> SourceToken<'a> {
@@ -354,8 +354,8 @@ impl<'a> SourceToken<'a> {
     }
 }
 
-#[derive(Debug)]
-enum Token {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Token {
     Keyword(Keyword),
     Symbol(Symbol),
     Identifier,
@@ -363,8 +363,8 @@ enum Token {
     StringLiteral,
 }
 
-#[derive(Debug, IntoStaticStr)]
-enum Keyword {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, IntoStaticStr)]
+pub(crate) enum Keyword {
     Class,
     Constructor,
     Function,
@@ -394,8 +394,8 @@ impl Keyword {
     }
 }
 
-#[derive(Debug, IntoStaticStr)]
-enum Symbol {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, IntoStaticStr)]
+pub(crate) enum Symbol {
     LeftBrace,
     RightBrace,
     LeftParen,

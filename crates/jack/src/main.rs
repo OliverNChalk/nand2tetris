@@ -1,15 +1,15 @@
-use std::io::{BufWriter, Write};
-
-use crate::args::Action;
-use crate::parser::parse;
-use crate::tokenizer::Tokenizer;
-
 mod args;
 mod parser;
 mod tokenizer;
 
 fn main() {
-    use clap::Parser;
+    use std::io::{BufWriter, Write};
+
+    use clap::Parser as _;
+
+    use crate::args::Action;
+    use crate::parser::Parser;
+    use crate::tokenizer::Tokenizer;
 
     // Parse command line args.
     let args = args::Args::parse();
@@ -33,7 +33,7 @@ fn main() {
             writeln!(output, "</tokens>").unwrap();
         }
         Action::Parse => {
-            let class = parse(tokenizer);
+            let class = Parser::parse(tokenizer);
 
             println!("{class:#?}")
         }
