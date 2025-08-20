@@ -1,3 +1,6 @@
+// TODO: Remove once we start on the AST.
+#![allow(dead_code)]
+
 use std::io::Write;
 
 use strum::IntoStaticStr;
