@@ -81,8 +81,8 @@ impl Parser {
         // Eat the modifier.
         let modifier = tokenizer.next().unwrap().unwrap();
         let modifier = match modifier.token {
-            Token::Keyword(Keyword::Static) => Modifier::Static,
-            Token::Keyword(Keyword::Field) => Modifier::Field,
+            Token::Keyword(Keyword::Static) => FieldModifier::Static,
+            Token::Keyword(Keyword::Field) => FieldModifier::Field,
             _ => unreachable!(),
         };
 
@@ -138,8 +138,48 @@ impl Parser {
 
     fn try_eat_class_subroutine<'a>(
         tokenizer: &mut Peekable<Tokenizer<'a>>,
-    ) -> Result<Option<SubroutineDeclaration>, ParserError<'a>> {
-        todo!()
+    ) -> Result<Option<SubroutineDeclaration<'a>>, ParserError<'a>> {
+        let Some(Ok(peek)) = tokenizer.peek() else { return Ok(None) };
+
+        if !matches!(
+            peek.token,
+            Token::Keyword(Keyword::Constructor | Keyword::Function | Keyword::Method)
+        ) {
+            return Ok(None);
+        }
+
+        // Eat the function category.
+        let category = tokenizer.next().unwrap()?;
+        let category = match category.token {
+            Token::Keyword(Keyword::Constructor) => FunctionCategory::Constructor,
+            Token::Keyword(Keyword::Function) => FunctionCategory::Function,
+            Token::Keyword(Keyword::Method) => FunctionCategory::Method,
+            _ => return Err(ParserError::UnexpectedToken(category)),
+        };
+
+        // Eat the return type.
+        let SourceToken { source, token } =
+            tokenizer.next().ok_or(ParserError::UnexpectedEof)??;
+        let return_type = match token {
+            Token::Keyword(Keyword::Void) => ReturnType::Void,
+            Token::Identifier => ReturnType::Class(source),
+            _ => return Err(ParserError::UnexpectedToken(SourceToken { source, token })),
+        };
+
+        // Eat the subroutine name.
+        let name = eat!(tokenizer, Token::Identifier)?;
+
+        // TODO: Parameter list.
+
+        // TODO: Function body.
+
+        Ok(Some(SubroutineDeclaration {
+            category,
+            return_type,
+            name,
+            parameter_list: vec![],
+            body: SubroutineBody {},
+        }))
     }
 
     fn parse_keyword() -> () {
@@ -161,18 +201,18 @@ pub(crate) enum ParserError<'a> {
 pub(crate) struct Class<'a> {
     pub(crate) name: String,
     pub(crate) variables: Vec<VariableDeclaration<'a>>,
-    pub(crate) subroutines: Vec<SubroutineDeclaration>,
+    pub(crate) subroutines: Vec<SubroutineDeclaration<'a>>,
 }
 
 #[derive(Debug)]
 pub(crate) struct VariableDeclaration<'a> {
-    pub(crate) modifier: Modifier,
+    pub(crate) modifier: FieldModifier,
     pub(crate) var_type: Type<'a>,
     pub(crate) name: &'a str,
 }
 
 #[derive(Debug, Clone, Copy)]
-pub(crate) enum Modifier {
+pub(crate) enum FieldModifier {
     Static,
     Field,
 }
@@ -186,4 +226,26 @@ pub(crate) enum Type<'a> {
 }
 
 #[derive(Debug)]
-pub(crate) struct SubroutineDeclaration {}
+pub(crate) struct SubroutineDeclaration<'a> {
+    category: FunctionCategory,
+    return_type: ReturnType<'a>,
+    name: &'a str,
+    parameter_list: Vec<()>,
+    body: SubroutineBody,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum FunctionCategory {
+    Constructor,
+    Function,
+    Method,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum ReturnType<'a> {
+    Void,
+    Class(&'a str),
+}
+
+#[derive(Debug)]
+pub(crate) struct SubroutineBody {}
