@@ -107,13 +107,13 @@ impl Parser {
         // Eat remaining the variable declarations.
         let mut vars = vec![VariableDeclaration { modifier, var_type, name }];
         loop {
-            let Some(Ok(token)) = tokenizer.peek() else {
+            let Some(Ok(st)) = tokenizer.peek() else {
                 break;
             };
 
             // Following the prior variable declaration should be a comma if we have more
             // variable declarations.
-            if token.token != Token::Symbol(Symbol::Comma) {
+            if st.token != Token::Symbol(Symbol::Comma) {
                 break;
             }
 
@@ -169,7 +169,38 @@ impl Parser {
         // Eat the subroutine name.
         let name = eat!(tokenizer, Token::Identifier)?;
 
-        // TODO: Parameter list.
+        // Eat any parameter declarations.
+        let mut params = Vec::default();
+        let mut more = false;
+        loop {
+            let Some(Ok(st)) = tokenizer.peek() else {
+                break;
+            };
+
+            // If this is not a parameter declaration, we are done.
+            let Some(parameter_type) = Type::parse(st) else {
+                break;
+            };
+            tokenizer.next().unwrap().unwrap();
+
+            // Parse the parameter name.
+            let name = eat!(tokenizer, Token::Identifier)?;
+
+            // Maybe eat a comma.
+            let has_comma = matches!(
+                tokenizer.peek(),
+                Some(Ok(SourceToken { token: Token::Symbol(Symbol::Comma), .. }))
+            );
+            if has_comma {
+                tokenizer.next().unwrap().unwrap();
+            }
+            more = has_comma;
+
+            params.push(ParameterDeclaration { parameter_type, name })
+        }
+        if more {
+            return Err(ParserError::TrailingComma);
+        }
 
         // TODO: Function body.
 
@@ -177,7 +208,7 @@ impl Parser {
             category,
             return_type,
             name,
-            parameter_list: vec![],
+            parameters: vec![],
             body: SubroutineBody {},
         }))
     }
@@ -195,6 +226,8 @@ pub(crate) enum ParserError<'a> {
     UnexpectedToken(SourceToken<'a>),
     #[error("Unexpected eof")]
     UnexpectedEof,
+    #[error("Trailing comma")]
+    TrailingComma,
 }
 
 #[derive(Debug)]
@@ -230,7 +263,7 @@ pub(crate) struct SubroutineDeclaration<'a> {
     category: FunctionCategory,
     return_type: ReturnType<'a>,
     name: &'a str,
-    parameter_list: Vec<()>,
+    parameters: Vec<ParameterDeclaration<'a>>,
     body: SubroutineBody,
 }
 
@@ -245,6 +278,24 @@ pub(crate) enum FunctionCategory {
 pub(crate) enum ReturnType<'a> {
     Void,
     Class(&'a str),
+}
+
+#[derive(Debug)]
+pub(crate) struct ParameterDeclaration<'a> {
+    parameter_type: Type<'a>,
+    name: &'a str,
+}
+
+impl<'a> Type<'a> {
+    fn parse(SourceToken { source, token }: &SourceToken<'a>) -> Option<Self> {
+        match token {
+            Token::Keyword(Keyword::Int) => Some(Self::Int),
+            Token::Keyword(Keyword::Char) => Some(Self::Char),
+            Token::Keyword(Keyword::Boolean) => Some(Self::Boolean),
+            Token::Identifier => Some(Self::Class(source)),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Debug)]
