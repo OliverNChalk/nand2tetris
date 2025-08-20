@@ -324,8 +324,15 @@ impl<'a> SourceToken<'a> {
             Token::Keyword(_) => {
                 write!(wx, "<keyword> {source} </keyword>").unwrap();
             }
-            Token::Symbol(_) => {
-                write!(wx, "<symbol> {source} </symbol>").unwrap();
+            Token::Symbol(symbol) => {
+                write!(wx, "<symbol> ").unwrap();
+                match symbol {
+                    Symbol::LeftAngleBracket => write!(wx, "&lt;"),
+                    Symbol::RightAngleBracket => write!(wx, "&gt;"),
+                    _ => write!(wx, "{source}"),
+                }
+                .unwrap();
+                write!(wx, " </symbol>").unwrap();
             }
             Token::Identifier => {
                 write!(wx, "<identifier> {source} </identifier>").unwrap();
@@ -334,7 +341,8 @@ impl<'a> SourceToken<'a> {
                 write!(wx, "<integerConstant> {source} </integerConstant>").unwrap();
             }
             Token::StringLiteral => {
-                write!(wx, "<stringConstant> {source} </stringConstant>").unwrap();
+                write!(wx, "<stringConstant> {} </stringConstant>", &source[1..source.len() - 1])
+                    .unwrap();
             }
         }
     }
