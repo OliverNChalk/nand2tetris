@@ -7,9 +7,11 @@ use crate::tokenizer::{Keyword, SourceToken, Symbol, Token, TokenizeError, Token
 macro_rules! eat {
     ($tokenizer:expr, $expected:pat) => {{
         let SourceToken { source, token } = $tokenizer.next().unwrap()?;
-        assert!(matches!(token, $expected));
+        if !matches!(token, $expected) {
+            return Err(ParserError::UnexpectedToken(SourceToken { source, token }));
+        }
 
-        source
+        Ok::<_, ParserError>(source)
     }};
 }
 
@@ -21,14 +23,18 @@ impl Parser {
 
         // All Jack files must contain exactly one class, so lets start by eating the
         // beginning of the class declaration.
-        let _ = eat!(&mut tokenizer, Token::Keyword(Keyword::Class));
-        let class_name = eat!(&mut tokenizer, Token::Identifier);
-        let _ = eat!(&mut tokenizer, Token::Symbol(Symbol::LeftBrace));
+        eat!(&mut tokenizer, Token::Keyword(Keyword::Class))?;
+        let class_name = eat!(&mut tokenizer, Token::Identifier)?;
+        eat!(&mut tokenizer, Token::Symbol(Symbol::LeftBrace))?;
 
         // Next we eat the body of the class.
         let class = Class {
             name: class_name.to_string(),
-            variables: Self::eat_multiple(&mut tokenizer, Self::try_eat_class_variable)?,
+            // PERF: These temporary vector allocations are annoying.
+            variables: Self::eat_multiple(&mut tokenizer, Self::try_eat_class_variable)?
+                .into_iter()
+                .flatten()
+                .collect(),
             subroutines: Self::eat_multiple(&mut tokenizer, Self::try_eat_class_subroutine)?,
         };
 
@@ -65,14 +71,14 @@ impl Parser {
 
     fn try_eat_class_variable<'a>(
         tokenizer: &mut Peekable<Tokenizer<'a>>,
-    ) -> Result<Option<VariableDeclaration<'a>>, ParserError<'a>> {
+    ) -> Result<Option<Vec<VariableDeclaration<'a>>>, ParserError<'a>> {
         let Some(Ok(peek)) = tokenizer.peek() else { return Ok(None) };
 
         if !matches!(peek.token, Token::Keyword(Keyword::Static | Keyword::Field)) {
             return Ok(None);
         }
 
-        // Extract the modifier.
+        // Eat the modifier.
         let modifier = tokenizer.next().unwrap().unwrap();
         let modifier = match modifier.token {
             Token::Keyword(Keyword::Static) => Modifier::Static,
@@ -80,8 +86,9 @@ impl Parser {
             _ => unreachable!(),
         };
 
-        // Extract the type.
-        let SourceToken { source, token } = tokenizer.next().unwrap()?;
+        // Eat the type.
+        let SourceToken { source, token } =
+            tokenizer.next().ok_or(ParserError::UnexpectedEof)??;
         let var_type = match token {
             Token::Keyword(Keyword::Int) => Type::Int,
             Token::Keyword(Keyword::Char) => Type::Char,
@@ -90,7 +97,43 @@ impl Parser {
             _ => return Err(ParserError::UnexpectedToken(SourceToken { source, token })),
         };
 
-        todo!()
+        // Eat the first variable name.
+        let SourceToken { source: name, token } =
+            tokenizer.next().ok_or(ParserError::UnexpectedEof)??;
+        if token != Token::Identifier {
+            return Err(ParserError::UnexpectedToken(SourceToken { source: name, token }));
+        }
+
+        // Eat remaining the variable declarations.
+        let mut vars = vec![VariableDeclaration { modifier, var_type, name }];
+        loop {
+            let Some(Ok(token)) = tokenizer.peek() else {
+                break;
+            };
+
+            // Following the prior variable declaration should be a comma if we have more
+            // variable declarations.
+            if token.token != Token::Symbol(Symbol::Comma) {
+                break;
+            }
+
+            // Eat the comma.
+            eat!(tokenizer, Token::Symbol(Symbol::Comma))?;
+
+            // Eat the next variable name.
+            let name = eat!(tokenizer, Token::Symbol(Symbol::Comma))?;
+
+            vars.push(VariableDeclaration { modifier, var_type, name })
+        }
+
+        // Eat the semicolon.
+        let SourceToken { source, token } =
+            tokenizer.next().ok_or(ParserError::UnexpectedEof)??;
+        if token != Token::Symbol(Symbol::Semicolon) {
+            return Err(ParserError::UnexpectedToken(SourceToken { source, token }));
+        }
+
+        Ok(Some(vars))
     }
 
     fn try_eat_class_subroutine<'a>(
@@ -110,6 +153,8 @@ pub(crate) enum ParserError<'a> {
     InvalidToken(#[from] TokenizeError),
     #[error("Unexpected token; token={0:?}")]
     UnexpectedToken(SourceToken<'a>),
+    #[error("Unexpected eof")]
+    UnexpectedEof,
 }
 
 #[derive(Debug)]
@@ -123,15 +168,16 @@ pub(crate) struct Class<'a> {
 pub(crate) struct VariableDeclaration<'a> {
     pub(crate) modifier: Modifier,
     pub(crate) var_type: Type<'a>,
+    pub(crate) name: &'a str,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub(crate) enum Modifier {
     Static,
     Field,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub(crate) enum Type<'a> {
     Int,
     Char,
