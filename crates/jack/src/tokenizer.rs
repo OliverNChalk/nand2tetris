@@ -12,7 +12,7 @@ impl<'a> Tokenizer<'a> {
         Self { source, errored: false }
     }
 
-    fn try_parse_symbol(&mut self) -> Option<Symbol> {
+    fn try_parse_symbol(&mut self) -> Option<SourceToken<'a>> {
         debug_assert!(self.source.as_bytes()[0] != b' ');
 
         let symbol = match self.source.as_bytes().first()? {
@@ -38,13 +38,16 @@ impl<'a> Tokenizer<'a> {
             _ => return None,
         };
 
+        // Construct our token.
+        let token = SourceToken { source: &self.source[..1], token: Token::Symbol(symbol) };
+
         // Advance our position in the source.
         self.source = &self.source[1..];
 
-        Some(symbol)
+        Some(token)
     }
 
-    fn try_parse_keyword(&mut self) -> Option<Keyword> {
+    fn try_parse_keyword(&mut self) -> Option<SourceToken<'a>> {
         debug_assert!(self.source.as_bytes()[0] != b' ');
 
         // Keywords are terminated by a space.
@@ -81,15 +84,17 @@ impl<'a> Tokenizer<'a> {
             _ => return None,
         };
 
-        // SAFETY: As we know `word` to be valid UTF8, we can safely trim the entire
-        // word without splitting a UTF-8 char boundary.
-        self.source =
-            unsafe { core::str::from_utf8_unchecked(&self.source.as_bytes()[word.len()..]) };
+        // Construct our token.
+        let token =
+            SourceToken { source: &self.source[..word.len()], token: Token::Keyword(keyword) };
 
-        Some(keyword)
+        // Advance our position in the source.
+        self.source = &self.source[word.len()..];
+
+        Some(token)
     }
 
-    fn try_parse_identifier(&mut self) -> Option<&'a str> {
+    fn try_parse_identifier(&mut self) -> Option<SourceToken<'a>> {
         debug_assert!(self.source.as_bytes()[0] != b' ');
 
         // Identifiers cannot start with a digit.
@@ -104,10 +109,7 @@ impl<'a> Tokenizer<'a> {
             .iter()
             .position(|byte| !byte.is_ascii_alphanumeric() && byte != &b'_')
         {
-            // SAFETY: As no ASCII characters overlap with UTF8 multi byte characters, we can
-            // safely assume that if we find a space and then index that space, we will not be
-            // splitting any UTF-8 chars.
-            Some(end) => unsafe { core::str::from_utf8_unchecked(&self.source.as_bytes()[..end]) },
+            Some(end) => &self.source[..end],
             None => self.source,
         };
 
@@ -116,15 +118,18 @@ impl<'a> Tokenizer<'a> {
             return None;
         }
 
+        // Construct our token.
+        let token = SourceToken { source: identifier, token: Token::Identifier };
+
         // SAFETY: As we know `word` to be valid UTF8, we can safely trim the entire
         // word without splitting a UTF-8 char boundary.
         self.source =
             unsafe { core::str::from_utf8_unchecked(&self.source.as_bytes()[identifier.len()..]) };
 
-        Some(identifier)
+        Some(token)
     }
 
-    fn try_parse_integer_literal(&mut self) -> Option<i16> {
+    fn try_parse_integer_literal(&mut self) -> Option<SourceToken<'a>> {
         debug_assert!(self.source.as_bytes()[0] != b' ');
 
         // Integer literals must contain only digits.
@@ -155,15 +160,18 @@ impl<'a> Tokenizer<'a> {
         // Jack integers literals cannot be negative.
         assert!(!literal.is_negative());
 
+        // Construct our token.
+        let token = SourceToken { source: literal_s, token: Token::IntegerLiteral(literal) };
+
         // SAFETY: As we know `word` to be valid UTF8, we can safely trim the entire
         // word without splitting a UTF-8 char boundary.
         self.source =
             unsafe { core::str::from_utf8_unchecked(&self.source.as_bytes()[literal_s.len()..]) };
 
-        Some(literal)
+        Some(token)
     }
 
-    fn try_parse_string_literal(&mut self) -> Option<&'a str> {
+    fn try_parse_string_literal(&mut self) -> Option<SourceToken<'a>> {
         debug_assert!(self.source.as_bytes()[0] != b' ');
 
         // String literals must start with a double quote.
@@ -193,17 +201,20 @@ impl<'a> Tokenizer<'a> {
             todo!("Jack specification forbids newlines in string literals");
         }
 
+        // Construct our token.
+        let token = SourceToken { source: literal, token: Token::StringLiteral };
+
         // SAFETY: As we know `word` to be valid UTF8, we can safely trim the entire
         // word without splitting a UTF-8 char boundary.
         self.source =
             unsafe { core::str::from_utf8_unchecked(&self.source.as_bytes()[literal.len()..]) };
 
-        Some(literal)
+        Some(token)
     }
 }
 
 impl<'a> Iterator for Tokenizer<'a> {
-    type Item = Result<Token<'a>, TokenizeError>;
+    type Item = Result<SourceToken<'a>, TokenizeError>;
 
     fn next(&mut self) -> Option<Self::Item> {
         // Fuse ourselves if we have errored to prevent callers from suppressing errors
@@ -266,28 +277,28 @@ impl<'a> Iterator for Tokenizer<'a> {
             }
 
             // Try eat a symbol.
-            if let Some(symbol) = self.try_parse_symbol() {
-                return Some(Ok(Token::Symbol(symbol)));
+            if let Some(token) = self.try_parse_symbol() {
+                return Some(Ok(token));
             }
 
             // Try eat a keyword.
-            if let Some(keyword) = self.try_parse_keyword() {
-                return Some(Ok(Token::Keyword(keyword)));
+            if let Some(token) = self.try_parse_keyword() {
+                return Some(Ok(token));
             }
 
             // Try eat an identifier.
-            if let Some(identifier) = self.try_parse_identifier() {
-                return Some(Ok(Token::Identifier(identifier)));
+            if let Some(token) = self.try_parse_identifier() {
+                return Some(Ok(token));
             }
 
             // Try eat an integer literal.
-            if let Some(literal) = self.try_parse_integer_literal() {
-                return Some(Ok(Token::IntegerLiteral(literal)));
+            if let Some(token) = self.try_parse_integer_literal() {
+                return Some(Ok(token));
             }
 
             // Try eat a string literal.
-            if let Some(literal) = self.try_parse_string_literal() {
-                return Some(Ok(Token::StringLiteral(literal)));
+            if let Some(token) = self.try_parse_string_literal() {
+                return Some(Ok(token));
             }
 
             todo!("Could not parse a token");
@@ -300,43 +311,46 @@ pub(crate) enum TokenizeError {
     UnclosedComment,
 }
 
-#[derive(Debug)]
-pub(crate) enum Token<'a> {
-    Keyword(Keyword),
-    Symbol(Symbol),
-    Identifier(&'a str),
-    IntegerLiteral(i16),
-    StringLiteral(&'a str),
+pub(crate) struct SourceToken<'a> {
+    source: &'a str,
+    token: Token,
 }
 
-impl<'a> Token<'a> {
+impl<'a> SourceToken<'a> {
     pub(crate) fn write_xml(&self, wx: &mut impl Write) {
-        match self {
-            Self::Keyword(keyword) => {
-                write!(wx, "<keyword> ").unwrap();
-                keyword.write_xml(wx);
-                write!(wx, " </keyword>").unwrap();
+        let Self { source, token } = self;
+
+        match token {
+            Token::Keyword(_) => {
+                write!(wx, "<keyword> {source} </keyword>").unwrap();
             }
-            Self::Symbol(symbol) => {
-                write!(wx, "<symbol> ").unwrap();
-                symbol.write_xml(wx);
-                write!(wx, " </symbol>").unwrap();
+            Token::Symbol(_) => {
+                write!(wx, "<symbol> {source} </symbol>").unwrap();
             }
-            Self::Identifier(identifier) => {
-                write!(wx, "<identifier> {identifier} </identifier>").unwrap();
+            Token::Identifier => {
+                write!(wx, "<identifier> {source} </identifier>").unwrap();
             }
-            Self::IntegerLiteral(literal) => {
-                write!(wx, "<integerConstant> {literal} </integerConstant>").unwrap();
+            Token::IntegerLiteral(_) => {
+                write!(wx, "<integerConstant> {source} </integerConstant>").unwrap();
             }
-            Self::StringLiteral(literal) => {
-                write!(wx, "<stringConstant> {literal} </stringConstant>").unwrap();
+            Token::StringLiteral => {
+                write!(wx, "<stringConstant> {source} </stringConstant>").unwrap();
             }
         }
     }
 }
 
+#[derive(Debug)]
+enum Token {
+    Keyword(Keyword),
+    Symbol(Symbol),
+    Identifier,
+    IntegerLiteral(i16),
+    StringLiteral,
+}
+
 #[derive(Debug, IntoStaticStr)]
-pub(crate) enum Keyword {
+enum Keyword {
     Class,
     Constructor,
     Function,
@@ -367,7 +381,7 @@ impl Keyword {
 }
 
 #[derive(Debug, IntoStaticStr)]
-pub(crate) enum Symbol {
+enum Symbol {
     LeftBrace,
     RightBrace,
     LeftParen,
