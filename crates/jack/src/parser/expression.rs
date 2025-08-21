@@ -49,9 +49,6 @@ pub(crate) enum Term<'a> {
 
 impl<'a> Term<'a> {
     fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParserError<'a>> {
-        let peek0 = tokenizer.peek_0();
-        let peek1 = tokenizer.peek_1();
-
         let st = tokenizer.peek_0().ok_or(ParserError::UnexpectedEof)??;
         let mut simple_term = |term: Term<'a>| -> Term<'a> {
             tokenizer.next().unwrap().unwrap();
@@ -101,7 +98,7 @@ impl<'a> Term<'a> {
                     }
                 }
             }
-            _ => todo!("{st:?}"),
+            _ => return Err(ParserError::UnexpectedToken(tokenizer.next().unwrap().unwrap())),
         })
     }
 }
