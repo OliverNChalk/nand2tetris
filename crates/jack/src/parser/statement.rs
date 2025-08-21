@@ -8,6 +8,10 @@ use crate::tokenizer::{Keyword, Symbol, Token, Tokenizer};
 #[derive(Debug)]
 pub(crate) enum Statement<'a> {
     Let(LetStatement<'a>),
+    If(IfStatement<'a>),
+    While(WhileStatement<'a>),
+    Do(DoStatement),
+    Return(ReturnStatement),
 }
 
 impl<'a> Statement<'a> {
@@ -15,10 +19,10 @@ impl<'a> Statement<'a> {
         let st = tokenizer.next().ok_or(ParserError::UnexpectedEof)??;
         match st.token {
             Token::Keyword(Keyword::Let) => LetStatement::parse(tokenizer).map(Self::Let),
-            Token::Keyword(Keyword::If) => todo!(),
-            Token::Keyword(Keyword::While) => todo!(),
-            Token::Keyword(Keyword::Do) => todo!(),
-            Token::Keyword(Keyword::Return) => todo!(),
+            Token::Keyword(Keyword::If) => IfStatement::parse(tokenizer).map(Self::If),
+            Token::Keyword(Keyword::While) => WhileStatement::parse(tokenizer).map(Self::While),
+            Token::Keyword(Keyword::Do) => DoStatement::parse(tokenizer).map(Self::Do),
+            Token::Keyword(Keyword::Return) => ReturnStatement::parse(tokenizer).map(Self::Return),
             _ => Err(ParserError::UnexpectedToken(st)),
         }
     }
@@ -51,5 +55,56 @@ impl<'a> LetStatement<'a> {
         let expression = Expression::parse(tokenizer)?;
 
         Ok(LetStatement { var_name, index, expression })
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct IfStatement<'a> {
+    pub(crate) expression: Expression,
+    pub(crate) if_statements: Vec<Statement<'a>>,
+    pub(crate) else_statement: Vec<Statement<'a>>,
+}
+
+impl<'a> IfStatement<'a> {
+    pub(crate) fn parse(tokenizer: &mut Peekable<Tokenizer<'a>>) -> Result<Self, ParserError<'a>> {
+        todo!()
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct WhileStatement<'a> {
+    pub(crate) expression: Expression,
+    pub(crate) statements: Vec<Statement<'a>>,
+}
+
+impl<'a> WhileStatement<'a> {
+    pub(crate) fn parse(tokenizer: &mut Peekable<Tokenizer<'a>>) -> Result<Self, ParserError<'a>> {
+        todo!()
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct DoStatement {
+    pub(crate) subroutine_call: (),
+}
+
+impl DoStatement {
+    pub(crate) fn parse<'a>(
+        tokenizer: &mut Peekable<Tokenizer<'a>>,
+    ) -> Result<Self, ParserError<'a>> {
+        todo!()
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct ReturnStatement {
+    pub(crate) return_value: Option<Expression>,
+}
+
+impl ReturnStatement {
+    pub(crate) fn parse<'a>(
+        tokenizer: &mut Peekable<Tokenizer<'a>>,
+    ) -> Result<Self, ParserError<'a>> {
+        todo!()
     }
 }
