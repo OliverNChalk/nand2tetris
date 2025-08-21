@@ -1,7 +1,7 @@
 use std::iter::Peekable;
 
 use crate::parser::ParserError;
-use crate::tokenizer::Tokenizer;
+use crate::tokenizer::{SourceToken, Token, Tokenizer};
 
 #[derive(Debug)]
 pub(crate) struct Expression<'a> {
@@ -13,7 +13,11 @@ impl<'a> Expression<'a> {
     pub(crate) fn parse(
         tokenizer: &mut Peekable<&mut Tokenizer<'a>>,
     ) -> Result<Self, ParserError<'a>> {
-        todo!()
+        let term = Box::new(Term::parse(tokenizer)?);
+
+        // TODO: Handle the op case.
+
+        Ok(Expression { term, operation: None })
     }
 }
 
@@ -30,6 +34,19 @@ pub(crate) enum Term<'a> {
     Expression(Expression<'a>),
     UnaryOp(()),
     SubroutineCall(()),
+}
+
+impl<'a> Term<'a> {
+    fn parse(tokenizer: &mut Peekable<&mut Tokenizer<'a>>) -> Result<Self, ParserError<'a>> {
+        let SourceToken { source, token } =
+            tokenizer.next().ok_or(ParserError::UnexpectedEof)??;
+        Ok(match token {
+            Token::StringConstant => Term::StringConstant(source),
+            Token::IntegerConstant(integer) => Term::IntegerConstant(integer),
+            Token::Identifier => Term::VarName(source),
+            _ => todo!("Term; {token:?}"),
+        })
+    }
 }
 
 #[derive(Debug)]

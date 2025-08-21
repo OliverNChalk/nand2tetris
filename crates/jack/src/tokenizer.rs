@@ -171,7 +171,7 @@ impl<'a> Tokenizer<'a> {
         assert!(!literal.is_negative());
 
         // Construct our token.
-        let token = SourceToken { source: literal_s, token: Token::IntegerLiteral(literal) };
+        let token = SourceToken { source: literal_s, token: Token::IntegerConstant(literal) };
 
         // SAFETY: As we know `word` to be valid UTF8, we can safely trim the entire
         // word without splitting a UTF-8 char boundary.
@@ -212,7 +212,7 @@ impl<'a> Tokenizer<'a> {
         }
 
         // Construct our token.
-        let token = SourceToken { source: literal, token: Token::StringLiteral };
+        let token = SourceToken { source: literal, token: Token::StringConstant };
 
         // SAFETY: As we know `word` to be valid UTF8, we can safely trim the entire
         // word without splitting a UTF-8 char boundary.
@@ -350,10 +350,10 @@ impl<'a> SourceToken<'a> {
             Token::Identifier => {
                 write!(wx, "<identifier> {source} </identifier>").unwrap();
             }
-            Token::IntegerLiteral(_) => {
+            Token::IntegerConstant(_) => {
                 write!(wx, "<integerConstant> {source} </integerConstant>").unwrap();
             }
-            Token::StringLiteral => {
+            Token::StringConstant => {
                 write!(wx, "<stringConstant> {} </stringConstant>", &source[1..source.len() - 1])
                     .unwrap();
             }
@@ -366,8 +366,8 @@ pub(crate) enum Token {
     Keyword(Keyword),
     Symbol(Symbol),
     Identifier,
-    IntegerLiteral(i16),
-    StringLiteral,
+    IntegerConstant(i16),
+    StringConstant,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, IntoStaticStr)]

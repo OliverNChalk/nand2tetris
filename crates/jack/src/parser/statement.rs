@@ -1,7 +1,7 @@
 use std::iter::Peekable;
 
 use crate::parser::expression::{Expression, SubroutineCall};
-use crate::parser::utils::{self, eat, peek_token};
+use crate::parser::utils::{eat, peek_token};
 use crate::parser::ParserError;
 use crate::tokenizer::{Keyword, Symbol, Token, Tokenizer};
 
@@ -62,6 +62,7 @@ impl<'a> LetStatement<'a> {
         // Eat the assignment.
         eat!(tokenizer, Token::Symbol(Symbol::Equals))?;
         let expression = Expression::parse(tokenizer)?;
+        eat!(tokenizer, Token::Symbol(Symbol::Semicolon))?;
 
         Ok(LetStatement { var_name, index, expression })
     }
