@@ -117,6 +117,7 @@ impl<'a> SubroutineBody<'a> {
         while !peek_token(tokenizer, Token::Symbol(Symbol::RightBrace)) {
             statements.push(Statement::parse(tokenizer)?);
         }
+        eat!(tokenizer, Token::Symbol(Symbol::RightBrace))?;
 
         Ok(SubroutineBody { variables, statements })
     }

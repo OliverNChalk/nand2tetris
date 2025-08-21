@@ -10,7 +10,7 @@ pub(crate) enum Statement<'a> {
     Let(LetStatement<'a>),
     If(IfStatement<'a>),
     While(WhileStatement<'a>),
-    Do(DoStatement),
+    Do(DoStatement<'a>),
     Return(ReturnStatement<'a>),
 }
 
@@ -137,12 +137,12 @@ impl<'a> WhileStatement<'a> {
 }
 
 #[derive(Debug)]
-pub(crate) struct DoStatement {
-    pub(crate) call: SubroutineCall,
+pub(crate) struct DoStatement<'a> {
+    pub(crate) call: SubroutineCall<'a>,
 }
 
-impl DoStatement {
-    pub(crate) fn parse<'a>(
+impl<'a> DoStatement<'a> {
+    pub(crate) fn parse(
         tokenizer: &mut Peekable<&mut Tokenizer<'a>>,
     ) -> Result<Self, ParserError<'a>> {
         eat!(tokenizer, Token::Keyword(Keyword::Do))?;

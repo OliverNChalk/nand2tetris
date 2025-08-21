@@ -12,7 +12,7 @@ use crate::parser::structure::{
     Class, ClassVariableDeclaration, FieldModifier, ParameterDeclaration, ReturnType,
     SubroutineBody, SubroutineDeclaration, SubroutineType, Type,
 };
-use crate::parser::utils::eat;
+use crate::parser::utils::{eat, peek_token};
 use crate::tokenizer::{Keyword, SourceToken, Symbol, Token, TokenizeError, Tokenizer};
 
 pub(crate) struct Parser;
@@ -98,40 +98,20 @@ impl Parser {
         };
 
         // Eat the first variable name.
-        let SourceToken { source: name, token } =
-            tokenizer.next().ok_or(ParserError::UnexpectedEof)??;
-        if token != Token::Identifier {
-            return Err(ParserError::UnexpectedToken(SourceToken { source: name, token }));
-        }
+        let name = eat!(tokenizer, Token::Identifier)?;
 
         // Eat remaining the variable declarations.
         let mut vars = vec![ClassVariableDeclaration { modifier, var_type, name }];
-        loop {
-            let Some(Ok(st)) = tokenizer.peek() else {
-                break;
-            };
-
-            // Following the prior variable declaration should be a comma if we have more
-            // variable declarations.
-            if st.token != Token::Symbol(Symbol::Comma) {
-                break;
-            }
-
+        while peek_token(tokenizer, Token::Symbol(Symbol::Comma)) {
             // Eat the comma.
             eat!(tokenizer, Token::Symbol(Symbol::Comma))?;
 
             // Eat the next variable name.
-            let name = eat!(tokenizer, Token::Symbol(Symbol::Comma))?;
+            let name = eat!(tokenizer, Token::Identifier)?;
 
             vars.push(ClassVariableDeclaration { modifier, var_type, name })
         }
-
-        // Eat the semicolon.
-        let SourceToken { source, token } =
-            tokenizer.next().ok_or(ParserError::UnexpectedEof)??;
-        if token != Token::Symbol(Symbol::Semicolon) {
-            return Err(ParserError::UnexpectedToken(SourceToken { source, token }));
-        }
+        eat!(tokenizer, Token::Symbol(Symbol::Semicolon))?;
 
         Ok(Some(vars))
     }
@@ -168,9 +148,9 @@ impl Parser {
 
         // Eat the subroutine name.
         let name = eat!(tokenizer, Token::Identifier)?;
-        eat!(tokenizer, Token::Symbol(Symbol::LeftParen))?;
 
         // Eat any parameter declarations.
+        eat!(tokenizer, Token::Symbol(Symbol::LeftParen))?;
         let mut parameters = Vec::default();
         let mut more = false;
         loop {
