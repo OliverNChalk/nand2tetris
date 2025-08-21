@@ -15,9 +15,7 @@ use crate::tokenizer::{Keyword, SourceToken, Symbol, Token, TokenizeError, Token
 pub(crate) struct Parser;
 
 impl Parser {
-    pub(crate) fn parse<'a>(
-        mut tokenizer: &mut Tokenizer<'a>,
-    ) -> Result<Class<'a>, ParserError<'a>> {
+    pub(crate) fn parse<'a>(tokenizer: &mut Tokenizer<'a>) -> Result<Class<'a>, ParserError<'a>> {
         // All Jack files must contain exactly one class, so lets start by eating the
         // beginning of the class declaration.
         eat!(tokenizer, Token::Keyword(Keyword::Class))?;
@@ -28,15 +26,15 @@ impl Parser {
         let class = Class {
             name: class_name.to_string(),
             // PERF: These temporary vector allocations are annoying.
-            variables: Self::eat_multiple(&mut tokenizer, Self::try_eat_class_variables)?
+            variables: Self::eat_multiple(tokenizer, Self::try_eat_class_variables)?
                 .into_iter()
                 .flatten()
                 .collect(),
-            subroutines: Self::eat_multiple(&mut tokenizer, Self::try_eat_class_subroutine)?,
+            subroutines: Self::eat_multiple(tokenizer, Self::try_eat_class_subroutine)?,
         };
 
         // Finally we finish up the class declaration.
-        Self::eat(&mut tokenizer, Token::Symbol(Symbol::RightBrace))?;
+        Self::eat(tokenizer, Token::Symbol(Symbol::RightBrace))?;
         assert!(tokenizer.next().is_none());
 
         Ok(class)
