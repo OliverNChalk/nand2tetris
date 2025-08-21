@@ -1,20 +1,18 @@
-use std::iter::Peekable;
-
 use crate::parser::ParserError;
 use crate::tokenizer::{Token, Tokenizer};
 
-pub(crate) fn next<'a>(
-    tokenizer: &mut Peekable<&mut Tokenizer<'a>>,
-) -> Result<Token, ParserError<'a>> {
+pub(crate) fn next<'a>(tokenizer: &mut Tokenizer<'a>) -> Result<Token, ParserError<'a>> {
     Ok(tokenizer.next().ok_or(ParserError::UnexpectedEof)??.token)
 }
 
-pub(crate) fn peek(tokenizer: &mut Peekable<&mut Tokenizer>) -> Option<Token> {
-    tokenizer.peek().and_then(|res| res.ok().map(|st| st.token))
+pub(crate) fn peek(tokenizer: &mut Tokenizer) -> Option<Token> {
+    tokenizer
+        .peek_0()
+        .and_then(|res| res.ok().map(|st| st.token))
 }
 
-pub(crate) fn check_next(tokenizer: &mut Peekable<&mut Tokenizer>, expected: Token) -> bool {
-    let Some(Ok(st)) = tokenizer.peek() else {
+pub(crate) fn check_next(tokenizer: &mut Tokenizer, expected: Token) -> bool {
+    let Some(Ok(st)) = tokenizer.peek_0() else {
         return false;
     };
 

@@ -1,6 +1,4 @@
-use std::iter::Peekable;
-
-use crate::parser::utils::{check_next, eat, next, peek};
+use crate::parser::utils::{check_next, eat, peek};
 use crate::parser::ParserError;
 use crate::tokenizer::{Keyword, SourceToken, Symbol, Token, Tokenizer};
 
@@ -11,9 +9,7 @@ pub(crate) struct Expression<'a> {
 }
 
 impl<'a> Expression<'a> {
-    pub(crate) fn parse(
-        tokenizer: &mut Peekable<&mut Tokenizer<'a>>,
-    ) -> Result<Self, ParserError<'a>> {
+    pub(crate) fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParserError<'a>> {
         let term = Box::new(Term::parse(tokenizer)?);
 
         // Eat the op if one exists.
@@ -52,7 +48,7 @@ pub(crate) enum Term<'a> {
 }
 
 impl<'a> Term<'a> {
-    fn parse(tokenizer: &mut Peekable<&mut Tokenizer<'a>>) -> Result<Self, ParserError<'a>> {
+    fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParserError<'a>> {
         let SourceToken { source, token } =
             tokenizer.next().ok_or(ParserError::UnexpectedEof)??;
         Ok(match token {
@@ -82,9 +78,7 @@ pub(crate) struct SubroutineCall<'a> {
 }
 
 impl<'a> SubroutineCall<'a> {
-    pub(crate) fn parse(
-        tokenizer: &mut Peekable<&mut Tokenizer<'a>>,
-    ) -> Result<Self, ParserError<'a>> {
+    pub(crate) fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParserError<'a>> {
         // No matter what, a subroutine call begins with an identifier (class, variable,
         // or subroutine).
         let first_identifier = eat!(tokenizer, Token::Identifier)?;
@@ -131,9 +125,7 @@ pub(crate) enum Op {
 }
 
 impl Op {
-    pub(crate) fn parse<'a>(
-        tokenizer: &mut Peekable<&mut Tokenizer<'a>>,
-    ) -> Result<Self, ParserError<'a>> {
+    pub(crate) fn parse<'a>(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParserError<'a>> {
         let st = tokenizer.next().ok_or(ParserError::UnexpectedEof)??;
         match st.token {
             Token::Symbol(Symbol::Plus) => Ok(Self::Plus),

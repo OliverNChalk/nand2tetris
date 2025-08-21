@@ -21,7 +21,6 @@ fn main() -> ExitCode {
 
     // Tokenize the source file.
     let mut tokenizer = Tokenizer::new(&source);
-    let peekable = (&mut tokenizer).peekable();
 
     // Execute requested action.
     match args.action {
@@ -29,13 +28,13 @@ fn main() -> ExitCode {
             let stdout = std::io::stdout().lock();
             let mut output = BufWriter::new(stdout);
             writeln!(output, "<tokens>").unwrap();
-            for token in tokenizer {
+            while let Some(token) = tokenizer.next() {
                 token.unwrap().write_xml(&mut output);
                 writeln!(output).unwrap();
             }
             writeln!(output, "</tokens>").unwrap();
         }
-        Action::Parse => match Parser::parse(peekable) {
+        Action::Parse => match Parser::parse(&mut tokenizer) {
             Ok(class) => println!("{class:#?}"),
             Err(err) => {
                 eprintln!("Failed to parse provided source file, the next two unparsed lines are:");

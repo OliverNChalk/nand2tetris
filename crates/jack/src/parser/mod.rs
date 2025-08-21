@@ -3,23 +3,20 @@ mod statement;
 mod structure;
 mod utils;
 
-use std::iter::Peekable;
-
 use thiserror::Error;
 
-use crate::parser::statement::Statement;
 use crate::parser::structure::{
     Class, ClassVariableDeclaration, FieldModifier, ParameterDeclaration, ReturnType,
     SubroutineBody, SubroutineDeclaration, SubroutineType, Type,
 };
-use crate::parser::utils::{eat, check_next};
+use crate::parser::utils::{check_next, eat};
 use crate::tokenizer::{Keyword, SourceToken, Symbol, Token, TokenizeError, Tokenizer};
 
 pub(crate) struct Parser;
 
 impl Parser {
     pub(crate) fn parse<'a>(
-        mut tokenizer: Peekable<&mut Tokenizer<'a>>,
+        mut tokenizer: &mut Tokenizer<'a>,
     ) -> Result<Class<'a>, ParserError<'a>> {
         // All Jack files must contain exactly one class, so lets start by eating the
         // beginning of the class declaration.
@@ -45,10 +42,7 @@ impl Parser {
         Ok(class)
     }
 
-    fn eat<'a>(
-        tokenizer: &mut Peekable<&mut Tokenizer<'a>>,
-        expected: Token,
-    ) -> Result<&'a str, ParserError<'a>> {
+    fn eat<'a>(tokenizer: &mut Tokenizer<'a>, expected: Token) -> Result<&'a str, ParserError<'a>> {
         let SourceToken { source, token } = tokenizer.next().unwrap()?;
         assert_eq!(token, expected);
 
@@ -56,8 +50,8 @@ impl Parser {
     }
 
     fn eat_multiple<'a, T>(
-        tokenizer: &mut Peekable<&mut Tokenizer<'a>>,
-        try_eat: impl Fn(&mut Peekable<&mut Tokenizer<'a>>) -> Result<Option<T>, ParserError<'a>>,
+        tokenizer: &mut Tokenizer<'a>,
+        try_eat: impl Fn(&mut Tokenizer<'a>) -> Result<Option<T>, ParserError<'a>>,
     ) -> Result<Vec<T>, ParserError<'a>> {
         std::iter::from_fn(|| try_eat(tokenizer).transpose()).try_fold(
             Vec::default(),
@@ -70,9 +64,9 @@ impl Parser {
     }
 
     fn try_eat_class_variables<'a>(
-        tokenizer: &mut Peekable<&mut Tokenizer<'a>>,
+        tokenizer: &mut Tokenizer<'a>,
     ) -> Result<Option<Vec<ClassVariableDeclaration<'a>>>, ParserError<'a>> {
-        let Some(Ok(peek)) = tokenizer.peek() else { return Ok(None) };
+        let Some(Ok(peek)) = tokenizer.peek_0() else { return Ok(None) };
 
         if !matches!(peek.token, Token::Keyword(Keyword::Static | Keyword::Field)) {
             return Ok(None);
@@ -117,9 +111,9 @@ impl Parser {
     }
 
     fn try_eat_class_subroutine<'a>(
-        tokenizer: &mut Peekable<&mut Tokenizer<'a>>,
+        tokenizer: &mut Tokenizer<'a>,
     ) -> Result<Option<SubroutineDeclaration<'a>>, ParserError<'a>> {
-        let Some(Ok(peek)) = tokenizer.peek() else { return Ok(None) };
+        let Some(Ok(peek)) = tokenizer.peek_0() else { return Ok(None) };
 
         if !matches!(
             peek.token,
@@ -156,7 +150,7 @@ impl Parser {
         loop {
             // If this is not a parameter declaration, we are done.
             if !matches!(
-                tokenizer.peek(),
+                tokenizer.peek_0(),
                 Some(Ok(SourceToken {
                     token: Token::Keyword(Keyword::Int)
                         | Token::Keyword(Keyword::Char)
@@ -176,7 +170,7 @@ impl Parser {
 
             // Maybe eat a comma.
             let has_comma = matches!(
-                tokenizer.peek(),
+                tokenizer.peek_0(),
                 Some(Ok(SourceToken { token: Token::Symbol(Symbol::Comma), .. }))
             );
             if has_comma {

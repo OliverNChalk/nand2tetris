@@ -1,11 +1,7 @@
-use std::iter::Peekable;
-
-use thiserror::Error;
-
 use crate::parser::statement::Statement;
-use crate::parser::utils::{eat, check_next};
+use crate::parser::utils::{check_next, eat};
 use crate::parser::ParserError;
-use crate::tokenizer::{Keyword, SourceToken, Symbol, Token, TokenizeError, Tokenizer};
+use crate::tokenizer::{Keyword, Symbol, Token, Tokenizer};
 
 #[derive(Debug)]
 pub(crate) struct Class<'a> {
@@ -64,9 +60,7 @@ pub(crate) struct ParameterDeclaration<'a> {
 }
 
 impl<'a> Type<'a> {
-    pub(crate) fn parse(
-        tokenizer: &mut Peekable<&mut Tokenizer<'a>>,
-    ) -> Result<Self, ParserError<'a>> {
+    pub(crate) fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParserError<'a>> {
         let st = tokenizer.next().ok_or(ParserError::UnexpectedEof)??;
 
         match st.token {
@@ -86,9 +80,7 @@ pub(crate) struct SubroutineBody<'a> {
 }
 
 impl<'a> SubroutineBody<'a> {
-    pub(crate) fn parse(
-        tokenizer: &mut Peekable<&mut Tokenizer<'a>>,
-    ) -> Result<Self, ParserError<'a>> {
+    pub(crate) fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParserError<'a>> {
         eat!(tokenizer, Token::Symbol(Symbol::LeftBrace))?;
 
         // Eat all variable declarations.

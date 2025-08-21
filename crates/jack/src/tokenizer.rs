@@ -9,15 +9,141 @@ use thiserror::Error;
 pub(crate) struct Tokenizer<'a> {
     source: &'a str,
     errored: bool,
+    peeked: [Option<Option<Result<SourceToken<'a>, TokenizeError>>>; 2],
 }
 
 impl<'a> Tokenizer<'a> {
     pub(crate) fn new(source: &'a str) -> Self {
-        Self { source, errored: false }
+        Self { source, errored: false, peeked: [None; 2] }
     }
 
     pub(crate) fn remaining(&self) -> &'a str {
         self.source
+    }
+
+    pub(crate) fn next(&mut self) -> Option<Result<SourceToken<'a>, TokenizeError>> {
+        // Return a previously peeked value if one exists.
+        if let Some(peeked) = self.peeked[0] {
+            self.peeked[0] = self.peeked[1];
+            self.peeked[1] = None;
+
+            return peeked;
+        }
+
+        // Fuse ourselves if we have errored to prevent callers from suppressing errors
+        // and infinite looping.
+        if self.errored {
+            return None;
+        }
+
+        // Loop until we are done or find a valid token.
+        loop {
+            // Strip any whitespace left over after parsing the previous iteration.
+            self.source = self.source.trim_ascii_start();
+
+            // If we have no source left we are done.
+            if self.source.is_empty() {
+                return None;
+            }
+
+            // If this is an empty line, skip it.
+            let source = self.source.as_bytes();
+            if source[0] == b'\n' {
+                // SAFETY: As we are trimming an ASCII byte, there is no possibility of UTF-8
+                // char splitting.
+                self.source =
+                    unsafe { core::str::from_utf8_unchecked(&self.source.as_bytes()[1..]) };
+
+                continue;
+            }
+
+            // If this is a single line comment, skip it.
+            if source.get(0..2).is_some_and(|chars| chars == b"//") {
+                self.source = source.iter().position(|byte| byte == &b'\n').map_or(
+                    &self.source[0..0],
+                    |pos| {
+                        // SAFETY: As we have found a valid ASCII byte, we can be sure this byte
+                        // does not belong to some multi-byte UTF-8 char.
+                        unsafe { core::str::from_utf8_unchecked(&self.source.as_bytes()[pos..]) }
+                    },
+                );
+
+                continue;
+            }
+
+            // If this is a doc comment comment, skip it.
+            if source.get(0..3).is_some_and(|chars| chars == b"/**") {
+                let Some(end) = source[3..].windows(2).position(|window| window == b"*/") else {
+                    self.errored = true;
+
+                    return Some(Err(TokenizeError::UnclosedComment));
+                };
+
+                // SAFETY: This is safe because the end character is in ASCII which cannot be
+                // present in a multi-byte UTF-8 character, thus no character splitting can
+                // occur.
+                self.source = unsafe {
+                    core::str::from_utf8_unchecked(&self.source.as_bytes()[(3 + end + 2)..])
+                };
+
+                continue;
+            }
+
+            // Try eat a symbol.
+            if let Some(token) = self.try_parse_symbol() {
+                return Some(Ok(token));
+            }
+
+            // Try eat a keyword.
+            if let Some(token) = self.try_parse_keyword() {
+                return Some(Ok(token));
+            }
+
+            // Try eat an identifier.
+            if let Some(token) = self.try_parse_identifier() {
+                return Some(Ok(token));
+            }
+
+            // Try eat an integer literal.
+            if let Some(token) = self.try_parse_integer_literal() {
+                return Some(Ok(token));
+            }
+
+            // Try eat a string literal.
+            if let Some(token) = self.try_parse_string_literal() {
+                return Some(Ok(token));
+            }
+
+            todo!("Could not parse a token");
+        }
+    }
+
+    pub(crate) fn peek_0(&mut self) -> Option<Result<SourceToken<'a>, TokenizeError>> {
+        if let Some(peeked) = self.peeked[0] {
+            return peeked;
+        }
+
+        let next = self.next();
+        self.peeked[0] = Some(next);
+
+        next
+    }
+
+    pub(crate) fn peek_1(&mut self) -> Option<Result<SourceToken<'a>, TokenizeError>> {
+        // NB: Ensure we have already peeked the 0th value.
+        self.peek_0();
+
+        // If we have already peeked the 1th value, return this.
+        if let Some(peeked) = self.peeked[1] {
+            return peeked;
+        }
+
+        // Else peek the next value which will be the 1th value in the internal
+        // iterator.
+        let next = self.next();
+        self.peeked[1] = Some(next);
+
+        next
     }
 
     fn try_parse_symbol(&mut self) -> Option<SourceToken<'a>> {
@@ -220,99 +346,6 @@ impl<'a> Tokenizer<'a> {
             unsafe { core::str::from_utf8_unchecked(&self.source.as_bytes()[literal.len()..]) };
 
         Some(token)
-    }
-}
-
-impl<'a> Iterator for Tokenizer<'a> {
-    type Item = Result<SourceToken<'a>, TokenizeError>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        // Fuse ourselves if we have errored to prevent callers from suppressing errors
-        // and infinite looping.
-        if self.errored {
-            return None;
-        }
-
-        // Loop until we are done or find a valid token.
-        loop {
-            // Strip any whitespace left over after parsing the previous iteration.
-            self.source = self.source.trim_ascii_start();
-
-            // If we have no source left we are done.
-            if self.source.is_empty() {
-                return None;
-            }
-
-            // If this is an empty line, skip it.
-            let source = self.source.as_bytes();
-            if source[0] == b'\n' {
-                // SAFETY: As we are trimming an ASCII byte, there is no possibility of UTF-8
-                // char splitting.
-                self.source =
-                    unsafe { core::str::from_utf8_unchecked(&self.source.as_bytes()[1..]) };
-
-                continue;
-            }
-
-            // If this is a single line comment, skip it.
-            if source.get(0..2).is_some_and(|chars| chars == b"//") {
-                self.source = source.iter().position(|byte| byte == &b'\n').map_or(
-                    &self.source[0..0],
-                    |pos| {
-                        // SAFETY: As we have found a valid ASCII byte, we can be sure this byte
-                        // does not belong to some multi-byte UTF-8 char.
-                        unsafe { core::str::from_utf8_unchecked(&self.source.as_bytes()[pos..]) }
-                    },
-                );
-
-                continue;
-            }
-
-            // If this is a doc comment comment, skip it.
-            if source.get(0..3).is_some_and(|chars| chars == b"/**") {
-                let Some(end) = source[3..].windows(2).position(|window| window == b"*/") else {
-                    self.errored = true;
-
-                    return Some(Err(TokenizeError::UnclosedComment));
-                };
-
-                // SAFETY: This is safe because the end character is in ASCII which cannot be
-                // present in a multi-byte UTF-8 character, thus no character splitting can
-                // occur.
-                self.source = unsafe {
-                    core::str::from_utf8_unchecked(&self.source.as_bytes()[(3 + end + 2)..])
-                };
-
-                continue;
-            }
-
-            // Try eat a symbol.
-            if let Some(token) = self.try_parse_symbol() {
-                return Some(Ok(token));
-            }
-
-            // Try eat a keyword.
-            if let Some(token) = self.try_parse_keyword() {
-                return Some(Ok(token));
-            }
-
-            // Try eat an identifier.
-            if let Some(token) = self.try_parse_identifier() {
-                return Some(Ok(token));
-            }
-
-            // Try eat an integer literal.
-            if let Some(token) = self.try_parse_integer_literal() {
-                return Some(Ok(token));
-            }
-
-            // Try eat a string literal.
-            if let Some(token) = self.try_parse_string_literal() {
-                return Some(Ok(token));
-            }
-
-            todo!("Could not parse a token");
-        }
     }
 }
 
