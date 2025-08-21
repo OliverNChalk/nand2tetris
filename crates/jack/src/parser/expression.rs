@@ -43,7 +43,7 @@ pub(crate) enum Term<'a> {
     Variable(&'a str),
     VariableIndex(VariableIndex<'a>),
     Expression(Expression<'a>),
-    UnaryOp(()),
+    UnaryOp { op: UnaryOp, term: Box<Self> },
     SubroutineCall(SubroutineCall<'a>),
 }
 
@@ -66,6 +66,25 @@ impl<'a> Term<'a> {
             Token::Keyword(Keyword::False) => simple_term(Term::False),
             Token::Keyword(Keyword::Null) => simple_term(Term::Null),
             Token::Keyword(Keyword::This) => simple_term(Term::This),
+            Token::Symbol(Symbol::Minus) => {
+                eat!(tokenizer, Token::Symbol(Symbol::Minus))?;
+                let term = Box::new(Term::parse(tokenizer)?);
+
+                Term::UnaryOp { op: UnaryOp::Negate, term }
+            }
+            Token::Symbol(Symbol::Tilde) => {
+                eat!(tokenizer, Token::Symbol(Symbol::Tilde))?;
+                let term = Box::new(Term::parse(tokenizer)?);
+
+                Term::UnaryOp { op: UnaryOp::Not, term }
+            }
+            Token::Symbol(Symbol::LeftParen) => {
+                eat!(tokenizer, Token::Symbol(Symbol::LeftParen))?;
+                let expression = Expression::parse(tokenizer)?;
+                eat!(tokenizer, Token::Symbol(Symbol::RightParen))?;
+
+                Term::Expression(expression)
+            }
             Token::Identifier => {
                 let next = tokenizer.peek_1().ok_or(ParserError::UnexpectedEof)??.token;
                 match next {
@@ -82,7 +101,7 @@ impl<'a> Term<'a> {
                     }
                 }
             }
-            _ => todo!(),
+            _ => todo!("{st:?}"),
         })
     }
 }
