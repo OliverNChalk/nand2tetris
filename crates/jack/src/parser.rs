@@ -31,7 +31,7 @@ impl Parser {
         let class = Class {
             name: class_name.to_string(),
             // PERF: These temporary vector allocations are annoying.
-            variables: Self::eat_multiple(&mut tokenizer, Self::try_eat_class_variable)?
+            variables: Self::eat_multiple(&mut tokenizer, Self::try_eat_class_variables)?
                 .into_iter()
                 .flatten()
                 .collect(),
@@ -69,9 +69,9 @@ impl Parser {
         )
     }
 
-    fn try_eat_class_variable<'a>(
+    fn try_eat_class_variables<'a>(
         tokenizer: &mut Peekable<Tokenizer<'a>>,
-    ) -> Result<Option<Vec<VariableDeclaration<'a>>>, ParserError<'a>> {
+    ) -> Result<Option<Vec<ClassVariableDeclaration<'a>>>, ParserError<'a>> {
         let Some(Ok(peek)) = tokenizer.peek() else { return Ok(None) };
 
         if !matches!(peek.token, Token::Keyword(Keyword::Static | Keyword::Field)) {
@@ -105,7 +105,7 @@ impl Parser {
         }
 
         // Eat remaining the variable declarations.
-        let mut vars = vec![VariableDeclaration { modifier, var_type, name }];
+        let mut vars = vec![ClassVariableDeclaration { modifier, var_type, name }];
         loop {
             let Some(Ok(st)) = tokenizer.peek() else {
                 break;
@@ -123,7 +123,7 @@ impl Parser {
             // Eat the next variable name.
             let name = eat!(tokenizer, Token::Symbol(Symbol::Comma))?;
 
-            vars.push(VariableDeclaration { modifier, var_type, name })
+            vars.push(ClassVariableDeclaration { modifier, var_type, name })
         }
 
         // Eat the semicolon.
@@ -149,12 +149,12 @@ impl Parser {
         }
 
         // Eat the function category.
-        let category = tokenizer.next().unwrap()?;
-        let category = match category.token {
-            Token::Keyword(Keyword::Constructor) => FunctionCategory::Constructor,
-            Token::Keyword(Keyword::Function) => FunctionCategory::Function,
-            Token::Keyword(Keyword::Method) => FunctionCategory::Method,
-            _ => return Err(ParserError::UnexpectedToken(category)),
+        let subroutine_type = tokenizer.next().unwrap()?;
+        let subroutine_type = match subroutine_type.token {
+            Token::Keyword(Keyword::Constructor) => SubroutineType::Constructor,
+            Token::Keyword(Keyword::Function) => SubroutineType::Function,
+            Token::Keyword(Keyword::Method) => SubroutineType::Method,
+            _ => return Err(ParserError::UnexpectedToken(subroutine_type)),
         };
 
         // Eat the return type.
@@ -170,20 +170,27 @@ impl Parser {
         let name = eat!(tokenizer, Token::Identifier)?;
 
         // Eat any parameter declarations.
-        let mut params = Vec::default();
+        let mut parameters = Vec::default();
         let mut more = false;
         loop {
-            let Some(Ok(st)) = tokenizer.peek() else {
-                break;
-            };
-
             // If this is not a parameter declaration, we are done.
-            let Some(parameter_type) = Type::parse(st) else {
+            if !matches!(
+                tokenizer.peek(),
+                Some(Ok(SourceToken {
+                    token: Token::Keyword(Keyword::Int)
+                        | Token::Keyword(Keyword::Char)
+                        | Token::Keyword(Keyword::Boolean)
+                        | Token::Identifier,
+                    ..
+                }))
+            ) {
                 break;
-            };
-            tokenizer.next().unwrap().unwrap();
+            }
 
-            // Parse the parameter name.
+            // Eat the parameter type.
+            let parameter_type = Type::parse(tokenizer)?;
+
+            // Eat the parameter name.
             let name = eat!(tokenizer, Token::Identifier)?;
 
             // Maybe eat a comma.
@@ -196,21 +203,16 @@ impl Parser {
             }
             more = has_comma;
 
-            params.push(ParameterDeclaration { parameter_type, name })
+            parameters.push(ParameterDeclaration { parameter_type, name })
         }
         if more {
             return Err(ParserError::TrailingComma);
         }
 
-        // TODO: Function body.
+        // Parse the subroutine body.
+        let body = SubroutineBody::parse(tokenizer)?;
 
-        Ok(Some(SubroutineDeclaration {
-            category,
-            return_type,
-            name,
-            parameters: vec![],
-            body: SubroutineBody {},
-        }))
+        Ok(Some(SubroutineDeclaration { subroutine_type, return_type, name, parameters, body }))
     }
 
     fn parse_keyword() -> () {
@@ -233,12 +235,12 @@ pub(crate) enum ParserError<'a> {
 #[derive(Debug)]
 pub(crate) struct Class<'a> {
     pub(crate) name: String,
-    pub(crate) variables: Vec<VariableDeclaration<'a>>,
+    pub(crate) variables: Vec<ClassVariableDeclaration<'a>>,
     pub(crate) subroutines: Vec<SubroutineDeclaration<'a>>,
 }
 
 #[derive(Debug)]
-pub(crate) struct VariableDeclaration<'a> {
+pub(crate) struct ClassVariableDeclaration<'a> {
     pub(crate) modifier: FieldModifier,
     pub(crate) var_type: Type<'a>,
     pub(crate) name: &'a str,
@@ -260,7 +262,7 @@ pub(crate) enum Type<'a> {
 
 #[derive(Debug)]
 pub(crate) struct SubroutineDeclaration<'a> {
-    category: FunctionCategory,
+    subroutine_type: SubroutineType,
     return_type: ReturnType<'a>,
     name: &'a str,
     parameters: Vec<ParameterDeclaration<'a>>,
@@ -268,7 +270,7 @@ pub(crate) struct SubroutineDeclaration<'a> {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub(crate) enum FunctionCategory {
+pub(crate) enum SubroutineType {
     Constructor,
     Function,
     Method,
@@ -287,16 +289,58 @@ pub(crate) struct ParameterDeclaration<'a> {
 }
 
 impl<'a> Type<'a> {
-    fn parse(SourceToken { source, token }: &SourceToken<'a>) -> Option<Self> {
-        match token {
-            Token::Keyword(Keyword::Int) => Some(Self::Int),
-            Token::Keyword(Keyword::Char) => Some(Self::Char),
-            Token::Keyword(Keyword::Boolean) => Some(Self::Boolean),
-            Token::Identifier => Some(Self::Class(source)),
-            _ => None,
+    fn parse(tokenizer: &mut Peekable<Tokenizer<'a>>) -> Result<Self, ParserError<'a>> {
+        let st = tokenizer.next().ok_or(ParserError::UnexpectedEof)??;
+
+        match st.token {
+            Token::Keyword(Keyword::Int) => Ok(Self::Int),
+            Token::Keyword(Keyword::Char) => Ok(Self::Char),
+            Token::Keyword(Keyword::Boolean) => Ok(Self::Boolean),
+            Token::Identifier => Ok(Self::Class(st.source)),
+            _ => Err(ParserError::UnexpectedToken(st)),
         }
     }
 }
 
 #[derive(Debug)]
 pub(crate) struct SubroutineBody {}
+
+impl SubroutineBody {
+    fn parse<'a>(tokenizer: &mut Peekable<Tokenizer<'a>>) -> Result<Self, ParserError<'a>> {
+        eat!(tokenizer, Token::Symbol(Symbol::LeftBrace))?;
+
+        while peek_token(tokenizer, Token::Keyword(Keyword::Var)) {
+            // Eat the first variable.
+            eat!(tokenizer, Token::Keyword(Keyword::Var))?;
+            let var_type = Type::parse(tokenizer)?;
+            let name = eat!(tokenizer, Token::Identifier)?;
+
+            // Eat the remaining variables.
+            let mut variables = vec![SubroutineVariableDeclaration { var_type, name }];
+            while peek_token(tokenizer, Token::Symbol(Symbol::Comma)) {
+                eat!(tokenizer, Token::Symbol(Symbol::Comma))?;
+                variables.push(SubroutineVariableDeclaration {
+                    var_type,
+                    name: eat!(tokenizer, Token::Identifier)?,
+                });
+            }
+        }
+
+        todo!();
+    }
+}
+
+pub(crate) struct SubroutineVariableDeclaration<'a> {
+    var_type: Type<'a>,
+    name: &'a str,
+}
+
+impl<'a> SubroutineVariableDeclaration<'a> {}
+
+fn peek_token(tokenizer: &mut Peekable<Tokenizer>, expected: Token) -> bool {
+    let Some(Ok(st)) = tokenizer.peek() else {
+        return false;
+    };
+
+    st.token == expected
+}

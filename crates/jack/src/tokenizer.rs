@@ -312,13 +312,13 @@ impl<'a> Iterator for Tokenizer<'a> {
     }
 }
 
-#[derive(Debug, Clone, Copy, Error)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Error)]
 pub(crate) enum TokenizeError {
     #[error("Unclosed comment")]
     UnclosedComment,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct SourceToken<'a> {
     pub(crate) source: &'a str,
     pub(crate) token: Token,
