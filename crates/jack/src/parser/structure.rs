@@ -64,7 +64,9 @@ pub(crate) struct ParameterDeclaration<'a> {
 }
 
 impl<'a> Type<'a> {
-    pub(crate) fn parse(tokenizer: &mut Peekable<Tokenizer<'a>>) -> Result<Self, ParserError<'a>> {
+    pub(crate) fn parse(
+        tokenizer: &mut Peekable<&mut Tokenizer<'a>>,
+    ) -> Result<Self, ParserError<'a>> {
         let st = tokenizer.next().ok_or(ParserError::UnexpectedEof)??;
 
         match st.token {
@@ -84,7 +86,9 @@ pub(crate) struct SubroutineBody<'a> {
 }
 
 impl<'a> SubroutineBody<'a> {
-    pub(crate) fn parse(tokenizer: &mut Peekable<Tokenizer<'a>>) -> Result<Self, ParserError<'a>> {
+    pub(crate) fn parse(
+        tokenizer: &mut Peekable<&mut Tokenizer<'a>>,
+    ) -> Result<Self, ParserError<'a>> {
         eat!(tokenizer, Token::Symbol(Symbol::LeftBrace))?;
 
         // Eat all variable declarations.
@@ -104,6 +108,8 @@ impl<'a> SubroutineBody<'a> {
                     name: eat!(tokenizer, Token::Identifier)?,
                 });
             }
+
+            eat!(tokenizer, Token::Symbol(Symbol::Semicolon))?;
         }
 
         // Eat all statements.

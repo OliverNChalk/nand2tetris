@@ -10,7 +10,9 @@ pub(crate) struct Expression<'a> {
 }
 
 impl<'a> Expression<'a> {
-    pub(crate) fn parse(tokenizer: &mut Peekable<Tokenizer<'a>>) -> Result<Self, ParserError<'a>> {
+    pub(crate) fn parse(
+        tokenizer: &mut Peekable<&mut Tokenizer<'a>>,
+    ) -> Result<Self, ParserError<'a>> {
         todo!()
     }
 }

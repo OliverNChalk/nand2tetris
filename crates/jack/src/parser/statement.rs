@@ -15,15 +15,20 @@ pub(crate) enum Statement<'a> {
 }
 
 impl<'a> Statement<'a> {
-    pub(crate) fn parse(tokenizer: &mut Peekable<Tokenizer<'a>>) -> Result<Self, ParserError<'a>> {
-        let st = tokenizer.next().ok_or(ParserError::UnexpectedEof)??;
+    pub(crate) fn parse(
+        tokenizer: &mut Peekable<&mut Tokenizer<'a>>,
+    ) -> Result<Self, ParserError<'a>> {
+        let st = match tokenizer.peek().ok_or(ParserError::UnexpectedEof)? {
+            Ok(token) => token,
+            Err(err) => return Err(ParserError::InvalidToken(*err)),
+        };
         match st.token {
             Token::Keyword(Keyword::Let) => LetStatement::parse(tokenizer).map(Self::Let),
             Token::Keyword(Keyword::If) => IfStatement::parse(tokenizer).map(Self::If),
             Token::Keyword(Keyword::While) => WhileStatement::parse(tokenizer).map(Self::While),
             Token::Keyword(Keyword::Do) => DoStatement::parse(tokenizer).map(Self::Do),
             Token::Keyword(Keyword::Return) => ReturnStatement::parse(tokenizer).map(Self::Return),
-            _ => Err(ParserError::UnexpectedToken(st)),
+            _ => Err(ParserError::UnexpectedToken(*st)),
         }
     }
 }
@@ -36,7 +41,9 @@ pub(crate) struct LetStatement<'a> {
 }
 
 impl<'a> LetStatement<'a> {
-    pub(crate) fn parse(tokenizer: &mut Peekable<Tokenizer<'a>>) -> Result<Self, ParserError<'a>> {
+    pub(crate) fn parse(
+        tokenizer: &mut Peekable<&mut Tokenizer<'a>>,
+    ) -> Result<Self, ParserError<'a>> {
         eat!(tokenizer, Token::Keyword(Keyword::Let))?;
         let var_name = eat!(tokenizer, Token::Identifier)?;
 
@@ -66,7 +73,9 @@ pub(crate) struct IfStatement<'a> {
 }
 
 impl<'a> IfStatement<'a> {
-    pub(crate) fn parse(tokenizer: &mut Peekable<Tokenizer<'a>>) -> Result<Self, ParserError<'a>> {
+    pub(crate) fn parse(
+        tokenizer: &mut Peekable<&mut Tokenizer<'a>>,
+    ) -> Result<Self, ParserError<'a>> {
         todo!()
     }
 }
@@ -78,7 +87,9 @@ pub(crate) struct WhileStatement<'a> {
 }
 
 impl<'a> WhileStatement<'a> {
-    pub(crate) fn parse(tokenizer: &mut Peekable<Tokenizer<'a>>) -> Result<Self, ParserError<'a>> {
+    pub(crate) fn parse(
+        tokenizer: &mut Peekable<&mut Tokenizer<'a>>,
+    ) -> Result<Self, ParserError<'a>> {
         todo!()
     }
 }
@@ -90,7 +101,7 @@ pub(crate) struct DoStatement {
 
 impl DoStatement {
     pub(crate) fn parse<'a>(
-        tokenizer: &mut Peekable<Tokenizer<'a>>,
+        tokenizer: &mut Peekable<&mut Tokenizer<'a>>,
     ) -> Result<Self, ParserError<'a>> {
         todo!()
     }
@@ -102,7 +113,9 @@ pub(crate) struct ReturnStatement<'a> {
 }
 
 impl<'a> ReturnStatement<'a> {
-    pub(crate) fn parse(tokenizer: &mut Peekable<Tokenizer<'a>>) -> Result<Self, ParserError<'a>> {
+    pub(crate) fn parse(
+        tokenizer: &mut Peekable<&mut Tokenizer<'a>>,
+    ) -> Result<Self, ParserError<'a>> {
         todo!()
     }
 }

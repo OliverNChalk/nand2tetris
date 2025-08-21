@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use std::str::FromStr;
 
 use clap::builder::{PossibleValuesParser, TypedValueParser};
-use clap::{Parser, Subcommand};
+use clap::Parser;
 use strum::{EnumString, VariantNames};
 
 #[derive(Parser, Debug)]

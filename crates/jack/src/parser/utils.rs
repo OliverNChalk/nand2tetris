@@ -2,7 +2,7 @@ use std::iter::Peekable;
 
 use crate::tokenizer::{Token, Tokenizer};
 
-pub(crate) fn peek_token(tokenizer: &mut Peekable<Tokenizer>, expected: Token) -> bool {
+pub(crate) fn peek_token(tokenizer: &mut Peekable<&mut Tokenizer>, expected: Token) -> bool {
     let Some(Ok(st)) = tokenizer.peek() else {
         return false;
     };

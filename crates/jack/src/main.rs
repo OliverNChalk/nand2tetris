@@ -1,8 +1,10 @@
+use std::process::ExitCode;
+
 mod args;
 mod parser;
 mod tokenizer;
 
-fn main() {
+fn main() -> ExitCode {
     use std::io::{BufWriter, Write};
 
     use clap::Parser as _;
@@ -18,7 +20,8 @@ fn main() {
     let source = std::fs::read_to_string(&args.path).unwrap();
 
     // Tokenize the source file.
-    let tokenizer = Tokenizer::new(&source);
+    let mut tokenizer = Tokenizer::new(&source);
+    let peekable = (&mut tokenizer).peekable();
 
     // Execute requested action.
     match args.action {
@@ -32,10 +35,19 @@ fn main() {
             }
             writeln!(output, "</tokens>").unwrap();
         }
-        Action::Parse => {
-            let class = Parser::parse(tokenizer);
+        Action::Parse => match Parser::parse(peekable) {
+            Ok(class) => println!("{class:#?}"),
+            Err(err) => {
+                eprintln!("Failed to parse provided source file, the next two unparsed lines are:");
+                for line in tokenizer.remaining().lines().take(3) {
+                    eprintln!("==> {line}");
+                }
+                eprintln!("\nError: {err}");
 
-            println!("{class:#?}")
-        }
+                return ExitCode::FAILURE;
+            }
+        },
     }
+
+    ExitCode::SUCCESS
 }

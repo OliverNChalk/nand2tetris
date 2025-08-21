@@ -18,14 +18,14 @@ use crate::tokenizer::{Keyword, SourceToken, Symbol, Token, TokenizeError, Token
 pub(crate) struct Parser;
 
 impl Parser {
-    pub(crate) fn parse(tokenizer: Tokenizer) -> Result<Class, ParserError> {
-        let mut tokenizer = tokenizer.peekable();
-
+    pub(crate) fn parse<'a>(
+        mut tokenizer: Peekable<&mut Tokenizer<'a>>,
+    ) -> Result<Class<'a>, ParserError<'a>> {
         // All Jack files must contain exactly one class, so lets start by eating the
         // beginning of the class declaration.
-        eat!(&mut tokenizer, Token::Keyword(Keyword::Class))?;
-        let class_name = eat!(&mut tokenizer, Token::Identifier)?;
-        eat!(&mut tokenizer, Token::Symbol(Symbol::LeftBrace))?;
+        eat!(tokenizer, Token::Keyword(Keyword::Class))?;
+        let class_name = eat!(tokenizer, Token::Identifier)?;
+        eat!(tokenizer, Token::Symbol(Symbol::LeftBrace))?;
 
         // Next we eat the body of the class.
         let class = Class {
@@ -46,7 +46,7 @@ impl Parser {
     }
 
     fn eat<'a>(
-        tokenizer: &mut Peekable<Tokenizer<'a>>,
+        tokenizer: &mut Peekable<&mut Tokenizer<'a>>,
         expected: Token,
     ) -> Result<&'a str, ParserError<'a>> {
         let SourceToken { source, token } = tokenizer.next().unwrap()?;
@@ -56,8 +56,8 @@ impl Parser {
     }
 
     fn eat_multiple<'a, T>(
-        tokenizer: &mut Peekable<Tokenizer<'a>>,
-        try_eat: impl Fn(&mut Peekable<Tokenizer<'a>>) -> Result<Option<T>, ParserError<'a>>,
+        tokenizer: &mut Peekable<&mut Tokenizer<'a>>,
+        try_eat: impl Fn(&mut Peekable<&mut Tokenizer<'a>>) -> Result<Option<T>, ParserError<'a>>,
     ) -> Result<Vec<T>, ParserError<'a>> {
         std::iter::from_fn(|| try_eat(tokenizer).transpose()).try_fold(
             Vec::default(),
@@ -70,7 +70,7 @@ impl Parser {
     }
 
     fn try_eat_class_variables<'a>(
-        tokenizer: &mut Peekable<Tokenizer<'a>>,
+        tokenizer: &mut Peekable<&mut Tokenizer<'a>>,
     ) -> Result<Option<Vec<ClassVariableDeclaration<'a>>>, ParserError<'a>> {
         let Some(Ok(peek)) = tokenizer.peek() else { return Ok(None) };
 
@@ -137,7 +137,7 @@ impl Parser {
     }
 
     fn try_eat_class_subroutine<'a>(
-        tokenizer: &mut Peekable<Tokenizer<'a>>,
+        tokenizer: &mut Peekable<&mut Tokenizer<'a>>,
     ) -> Result<Option<SubroutineDeclaration<'a>>, ParserError<'a>> {
         let Some(Ok(peek)) = tokenizer.peek() else { return Ok(None) };
 
@@ -168,6 +168,7 @@ impl Parser {
 
         // Eat the subroutine name.
         let name = eat!(tokenizer, Token::Identifier)?;
+        eat!(tokenizer, Token::Symbol(Symbol::LeftParen))?;
 
         // Eat any parameter declarations.
         let mut parameters = Vec::default();
@@ -208,6 +209,7 @@ impl Parser {
         if more {
             return Err(ParserError::TrailingComma);
         }
+        eat!(tokenizer, Token::Symbol(Symbol::RightParen))?;
 
         // Parse the subroutine body.
         let body = SubroutineBody::parse(tokenizer)?;

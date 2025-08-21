@@ -16,6 +16,10 @@ impl<'a> Tokenizer<'a> {
         Self { source, errored: false }
     }
 
+    pub(crate) fn remaining(&self) -> &'a str {
+        self.source
+    }
+
     fn try_parse_symbol(&mut self) -> Option<SourceToken<'a>> {
         debug_assert!(self.source.as_bytes()[0] != b' ');
 
