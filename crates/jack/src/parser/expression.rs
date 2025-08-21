@@ -40,8 +40,8 @@ pub(crate) enum Term<'a> {
     False,
     Null,
     This,
-    VarName(&'a str),
-    VarNameIndex(()),
+    Variable(&'a str),
+    VariableIndex(VariableIndex<'a>),
     Expression(Expression<'a>),
     UnaryOp(()),
     SubroutineCall(SubroutineCall<'a>),
@@ -69,20 +69,41 @@ impl<'a> Term<'a> {
             Token::Identifier => {
                 let next = tokenizer.peek_1().ok_or(ParserError::UnexpectedEof)??.token;
                 match next {
-                    // TODO
-                    Token::Symbol(Symbol::LeftBracket) => todo!(),
+                    Token::Symbol(Symbol::LeftBracket) => {
+                        Term::VariableIndex(VariableIndex::parse(tokenizer)?)
+                    }
                     Token::Symbol(Symbol::LeftParen | Symbol::Dot) => {
                         Term::SubroutineCall(SubroutineCall::parse(tokenizer)?)
                     }
                     _ => {
                         tokenizer.next().unwrap().unwrap();
 
-                        Term::VarName(st.source)
+                        Term::Variable(st.source)
                     }
                 }
             }
             _ => todo!(),
         })
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct VariableIndex<'a> {
+    var: &'a str,
+    index: i16,
+}
+
+impl<'a> VariableIndex<'a> {
+    fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParserError<'a>> {
+        let var = eat!(tokenizer, Token::Identifier)?;
+        eat!(tokenizer, Token::Symbol(Symbol::LeftBracket))?;
+        let index = tokenizer.next().ok_or(ParserError::UnexpectedEof)??;
+        eat!(tokenizer, Token::Symbol(Symbol::RightBracket))?;
+        let Token::IntegerConstant(index) = index.token else {
+            return Err(ParserError::UnexpectedToken(index));
+        };
+
+        Ok(Self { var, index })
     }
 }
 
