@@ -3,7 +3,7 @@ use std::iter::Peekable;
 use thiserror::Error;
 
 use crate::parser::statement::Statement;
-use crate::parser::utils::{eat, peek_token};
+use crate::parser::utils::{eat, check_next};
 use crate::parser::ParserError;
 use crate::tokenizer::{Keyword, SourceToken, Symbol, Token, TokenizeError, Tokenizer};
 
@@ -93,7 +93,7 @@ impl<'a> SubroutineBody<'a> {
 
         // Eat all variable declarations.
         let mut variables = Vec::default();
-        while peek_token(tokenizer, Token::Keyword(Keyword::Var)) {
+        while check_next(tokenizer, Token::Keyword(Keyword::Var)) {
             // Eat the first variable.
             eat!(tokenizer, Token::Keyword(Keyword::Var))?;
             let var_type = Type::parse(tokenizer)?;
@@ -101,7 +101,7 @@ impl<'a> SubroutineBody<'a> {
 
             // Eat the remaining variables.
             variables.push(SubroutineVariableDeclaration { var_type, name });
-            while peek_token(tokenizer, Token::Symbol(Symbol::Comma)) {
+            while check_next(tokenizer, Token::Symbol(Symbol::Comma)) {
                 eat!(tokenizer, Token::Symbol(Symbol::Comma))?;
                 variables.push(SubroutineVariableDeclaration {
                     var_type,
@@ -114,7 +114,7 @@ impl<'a> SubroutineBody<'a> {
 
         // Eat all statements.
         let mut statements = Vec::default();
-        while !peek_token(tokenizer, Token::Symbol(Symbol::RightBrace)) {
+        while !check_next(tokenizer, Token::Symbol(Symbol::RightBrace)) {
             statements.push(Statement::parse(tokenizer)?);
         }
         eat!(tokenizer, Token::Symbol(Symbol::RightBrace))?;

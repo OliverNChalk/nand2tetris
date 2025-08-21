@@ -12,7 +12,7 @@ use crate::parser::structure::{
     Class, ClassVariableDeclaration, FieldModifier, ParameterDeclaration, ReturnType,
     SubroutineBody, SubroutineDeclaration, SubroutineType, Type,
 };
-use crate::parser::utils::{eat, peek_token};
+use crate::parser::utils::{eat, check_next};
 use crate::tokenizer::{Keyword, SourceToken, Symbol, Token, TokenizeError, Tokenizer};
 
 pub(crate) struct Parser;
@@ -102,7 +102,7 @@ impl Parser {
 
         // Eat remaining the variable declarations.
         let mut vars = vec![ClassVariableDeclaration { modifier, var_type, name }];
-        while peek_token(tokenizer, Token::Symbol(Symbol::Comma)) {
+        while check_next(tokenizer, Token::Symbol(Symbol::Comma)) {
             // Eat the comma.
             eat!(tokenizer, Token::Symbol(Symbol::Comma))?;
 

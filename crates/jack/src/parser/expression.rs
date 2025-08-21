@@ -1,13 +1,13 @@
 use std::iter::Peekable;
 
-use crate::parser::utils::{eat, peek_token};
+use crate::parser::utils::{check_next, eat, next, peek};
 use crate::parser::ParserError;
 use crate::tokenizer::{Keyword, SourceToken, Symbol, Token, Tokenizer};
 
 #[derive(Debug)]
 pub(crate) struct Expression<'a> {
     term: Box<Term<'a>>,
-    operation: Option<Box<(Op, Term<'a>)>>,
+    op: Option<Box<(Op, Term<'a>)>>,
 }
 
 impl<'a> Expression<'a> {
@@ -16,9 +16,23 @@ impl<'a> Expression<'a> {
     ) -> Result<Self, ParserError<'a>> {
         let term = Box::new(Term::parse(tokenizer)?);
 
-        // TODO: Handle the op case.
+        // Eat the op if one exists.
+        let op = match peek(tokenizer) {
+            Some(Token::Symbol(
+                Symbol::Plus
+                | Symbol::Minus
+                | Symbol::Asterisk
+                | Symbol::ForwardSlash
+                | Symbol::Ampersand
+                | Symbol::Pipe
+                | Symbol::LeftAngleBracket
+                | Symbol::RightAngleBracket
+                | Symbol::Equals,
+            )) => Some(Box::new((Op::parse(tokenizer)?, Term::parse(tokenizer)?))),
+            _ => None,
+        };
 
-        Ok(Expression { term, operation: None })
+        Ok(Expression { term, op })
     }
 }
 
@@ -71,7 +85,7 @@ impl<'a> SubroutineCall<'a> {
 
         // If the next variable is a `.` then we have a class/variable identifier, else
         // we have a subroutine identifier.
-        let (var, subroutine) = match peek_token(tokenizer, Token::Symbol(Symbol::Dot)) {
+        let (var, subroutine) = match check_next(tokenizer, Token::Symbol(Symbol::Dot)) {
             true => {
                 eat!(tokenizer, Token::Symbol(Symbol::Dot))?;
                 let subroutine = eat!(tokenizer, Token::Identifier)?;
@@ -84,9 +98,9 @@ impl<'a> SubroutineCall<'a> {
         // Eat all the arguments.
         eat!(tokenizer, Token::Symbol(Symbol::LeftParen))?;
         let mut arguments = Vec::default();
-        while !peek_token(tokenizer, Token::Symbol(Symbol::RightParen)) {
+        while !check_next(tokenizer, Token::Symbol(Symbol::RightParen)) {
             arguments.push(Expression::parse(tokenizer)?);
-            if peek_token(tokenizer, Token::Symbol(Symbol::Comma)) {
+            if check_next(tokenizer, Token::Symbol(Symbol::Comma)) {
                 eat!(tokenizer, Token::Symbol(Symbol::Comma))?;
             }
         }
@@ -108,6 +122,26 @@ pub(crate) enum Op {
     Lt,
     Gt,
     Equals,
+}
+
+impl Op {
+    pub(crate) fn parse<'a>(
+        tokenizer: &mut Peekable<&mut Tokenizer<'a>>,
+    ) -> Result<Self, ParserError<'a>> {
+        let st = tokenizer.next().ok_or(ParserError::UnexpectedEof)??;
+        match st.token {
+            Token::Symbol(Symbol::Plus) => Ok(Self::Plus),
+            Token::Symbol(Symbol::Minus) => Ok(Self::Minus),
+            Token::Symbol(Symbol::Asterisk) => Ok(Self::Multiply),
+            Token::Symbol(Symbol::ForwardSlash) => Ok(Self::Divide),
+            Token::Symbol(Symbol::Ampersand) => Ok(Self::BitAnd),
+            Token::Symbol(Symbol::Pipe) => Ok(Self::BitOr),
+            Token::Symbol(Symbol::LeftAngleBracket) => Ok(Self::Lt),
+            Token::Symbol(Symbol::RightAngleBracket) => Ok(Self::Gt),
+            Token::Symbol(Symbol::Equals) => Ok(Self::Equals),
+            _ => Err(ParserError::UnexpectedToken(st)),
+        }
+    }
 }
 
 #[derive(Debug)]

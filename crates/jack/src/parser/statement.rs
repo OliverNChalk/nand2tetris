@@ -1,7 +1,7 @@
 use std::iter::Peekable;
 
 use crate::parser::expression::{Expression, SubroutineCall};
-use crate::parser::utils::{eat, peek_token};
+use crate::parser::utils::{check_next, eat};
 use crate::parser::ParserError;
 use crate::tokenizer::{Keyword, Symbol, Token, Tokenizer};
 
@@ -48,7 +48,7 @@ impl<'a> LetStatement<'a> {
         let var_name = eat!(tokenizer, Token::Identifier)?;
 
         // Handle index case.
-        let index = match peek_token(tokenizer, Token::Symbol(Symbol::LeftBracket)) {
+        let index = match check_next(tokenizer, Token::Symbol(Symbol::LeftBracket)) {
             true => {
                 eat!(tokenizer, Token::Symbol(Symbol::LeftBracket))?;
                 let expression = Expression::parse(tokenizer)?;
@@ -88,17 +88,17 @@ impl<'a> IfStatement<'a> {
         // Eat the braces & all statements
         eat!(tokenizer, Token::Symbol(Symbol::LeftBrace))?;
         let mut if_statements = Vec::default();
-        while !peek_token(tokenizer, Token::Symbol(Symbol::RightBrace)) {
+        while !check_next(tokenizer, Token::Symbol(Symbol::RightBrace)) {
             if_statements.push(Statement::parse(tokenizer)?);
         }
         eat!(tokenizer, Token::Symbol(Symbol::RightBrace))?;
 
         // Maybe eat the else statements.
         let mut else_statements = Vec::default();
-        if peek_token(tokenizer, Token::Keyword(Keyword::Else)) {
+        if check_next(tokenizer, Token::Keyword(Keyword::Else)) {
             eat!(tokenizer, Token::Keyword(Keyword::Else))?;
             eat!(tokenizer, Token::Symbol(Symbol::LeftBrace))?;
-            while !peek_token(tokenizer, Token::Symbol(Symbol::RightBrace)) {
+            while !check_next(tokenizer, Token::Symbol(Symbol::RightBrace)) {
                 else_statements.push(Statement::parse(tokenizer)?);
             }
             eat!(tokenizer, Token::Symbol(Symbol::RightBrace))?;
@@ -127,7 +127,7 @@ impl<'a> WhileStatement<'a> {
         // Eat the brace & all statements.
         eat!(tokenizer, Token::Symbol(Symbol::LeftBrace))?;
         let mut statements = Vec::default();
-        while !peek_token(tokenizer, Token::Symbol(Symbol::RightBrace)) {
+        while !check_next(tokenizer, Token::Symbol(Symbol::RightBrace)) {
             statements.push(Statement::parse(tokenizer)?);
         }
         eat!(tokenizer, Token::Symbol(Symbol::RightBrace))?;
@@ -162,7 +162,7 @@ impl<'a> ReturnStatement<'a> {
         tokenizer: &mut Peekable<&mut Tokenizer<'a>>,
     ) -> Result<Self, ParserError<'a>> {
         eat!(tokenizer, Token::Keyword(Keyword::Return))?;
-        let return_value = match peek_token(tokenizer, Token::Symbol(Symbol::Semicolon)) {
+        let return_value = match check_next(tokenizer, Token::Symbol(Symbol::Semicolon)) {
             true => None,
             false => Some(Expression::parse(tokenizer)?),
         };
