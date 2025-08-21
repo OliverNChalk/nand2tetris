@@ -48,7 +48,7 @@ pub(crate) enum Term<'a> {
     VarNameIndex(()),
     Expression(Expression<'a>),
     UnaryOp(()),
-    SubroutineCall(()),
+    SubroutineCall(SubroutineCall<'a>),
 }
 
 impl<'a> Term<'a> {
@@ -56,13 +56,19 @@ impl<'a> Term<'a> {
         let SourceToken { source, token } =
             tokenizer.next().ok_or(ParserError::UnexpectedEof)??;
         Ok(match token {
-            Token::StringConstant => Term::StringConstant(source),
             Token::IntegerConstant(integer) => Term::IntegerConstant(integer),
-            Token::Identifier => Term::VarName(source),
+            Token::StringConstant => Term::StringConstant(source),
             Token::Keyword(Keyword::True) => Term::True,
             Token::Keyword(Keyword::False) => Term::False,
             Token::Keyword(Keyword::Null) => Term::Null,
             Token::Keyword(Keyword::This) => Term::This,
+            Token::Identifier => match peek(tokenizer).ok_or(ParserError::UnexpectedEof)? {
+                Token::Symbol(Symbol::LeftBracket) => todo!("Index expression"),
+                Token::Symbol(Symbol::LeftParen) => {
+                    Term::SubroutineCall(SubroutineCall::parse(tokenizer)?)
+                }
+                _ => Term::VarName(source),
+            },
             _ => todo!("Term; {token:?}"),
         })
     }
