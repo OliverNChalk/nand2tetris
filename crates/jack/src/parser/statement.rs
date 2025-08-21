@@ -69,7 +69,7 @@ impl<'a> LetStatement<'a> {
 
 #[derive(Debug)]
 pub(crate) struct IfStatement<'a> {
-    pub(crate) expression: Expression<'a>,
+    pub(crate) condition: Expression<'a>,
     pub(crate) if_statements: Vec<Statement<'a>>,
     pub(crate) else_statements: Vec<Statement<'a>>,
 }
@@ -81,7 +81,7 @@ impl<'a> IfStatement<'a> {
         // Eat the condition expression.
         eat!(tokenizer, Token::Keyword(Keyword::If))?;
         eat!(tokenizer, Token::Symbol(Symbol::LeftParen))?;
-        let expression = Expression::parse(tokenizer)?;
+        let condition = Expression::parse(tokenizer)?;
         eat!(tokenizer, Token::Symbol(Symbol::RightParen))?;
 
         // Eat the braces & all statements
@@ -90,6 +90,7 @@ impl<'a> IfStatement<'a> {
         while !peek_token(tokenizer, Token::Symbol(Symbol::RightBrace)) {
             if_statements.push(Statement::parse(tokenizer)?);
         }
+        eat!(tokenizer, Token::Symbol(Symbol::RightBrace))?;
 
         // Maybe eat the else statements.
         let mut else_statements = Vec::default();
@@ -102,13 +103,13 @@ impl<'a> IfStatement<'a> {
             eat!(tokenizer, Token::Symbol(Symbol::RightBrace))?;
         }
 
-        Ok(IfStatement { expression, if_statements, else_statements })
+        Ok(IfStatement { condition, if_statements, else_statements })
     }
 }
 
 #[derive(Debug)]
 pub(crate) struct WhileStatement<'a> {
-    pub(crate) expression: Expression<'a>,
+    pub(crate) condition: Expression<'a>,
     pub(crate) statements: Vec<Statement<'a>>,
 }
 
@@ -116,7 +117,21 @@ impl<'a> WhileStatement<'a> {
     pub(crate) fn parse(
         tokenizer: &mut Peekable<&mut Tokenizer<'a>>,
     ) -> Result<Self, ParserError<'a>> {
-        todo!()
+        // Eat the condition expression.
+        eat!(tokenizer, Token::Keyword(Keyword::While))?;
+        eat!(tokenizer, Token::Symbol(Symbol::LeftParen))?;
+        let condition = Expression::parse(tokenizer)?;
+        eat!(tokenizer, Token::Symbol(Symbol::RightParen))?;
+
+        // Eat the brace & all statements.
+        eat!(tokenizer, Token::Symbol(Symbol::LeftBrace))?;
+        let mut statements = Vec::default();
+        while !peek_token(tokenizer, Token::Symbol(Symbol::RightBrace)) {
+            statements.push(Statement::parse(tokenizer)?);
+        }
+        eat!(tokenizer, Token::Symbol(Symbol::RightBrace))?;
+
+        Ok(WhileStatement { condition, statements })
     }
 }
 
