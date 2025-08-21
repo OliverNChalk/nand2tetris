@@ -130,20 +130,12 @@ impl<'a> Tokenizer<'a> {
     }
 
     pub(crate) fn peek_1(&mut self) -> Option<Result<SourceToken<'a>, TokenizeError>> {
-        // NB: Ensure we have already peeked the 0th value.
-        self.peek_0();
+        let peek_0 = self.next();
+        let peek_1 = self.next();
+        self.peeked[0] = Some(peek_0);
+        self.peeked[1] = Some(peek_1);
 
-        // If we have already peeked the 1th value, return this.
-        if let Some(peeked) = self.peeked[1] {
-            return peeked;
-        }
-
-        // Else peek the next value which will be the 1th value in the internal
-        // iterator.
-        let next = self.next();
-        self.peeked[1] = Some(next);
-
-        next
+        peek_1
     }
 
     fn try_parse_symbol(&mut self) -> Option<SourceToken<'a>> {

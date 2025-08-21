@@ -49,23 +49,39 @@ pub(crate) enum Term<'a> {
 
 impl<'a> Term<'a> {
     fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParserError<'a>> {
-        let SourceToken { source, token } =
-            tokenizer.next().ok_or(ParserError::UnexpectedEof)??;
-        Ok(match token {
-            Token::IntegerConstant(integer) => Term::IntegerConstant(integer),
-            Token::StringConstant => Term::StringConstant(source),
-            Token::Keyword(Keyword::True) => Term::True,
-            Token::Keyword(Keyword::False) => Term::False,
-            Token::Keyword(Keyword::Null) => Term::Null,
-            Token::Keyword(Keyword::This) => Term::This,
-            Token::Identifier => match peek(tokenizer).ok_or(ParserError::UnexpectedEof)? {
-                Token::Symbol(Symbol::LeftBracket) => todo!("Index expression"),
-                Token::Symbol(Symbol::LeftParen) => {
-                    Term::SubroutineCall(SubroutineCall::parse(tokenizer)?)
+        let peek0 = tokenizer.peek_0();
+        let peek1 = tokenizer.peek_1();
+
+        let st = tokenizer.peek_0().ok_or(ParserError::UnexpectedEof)??;
+        let mut simple_term = |term: Term<'a>| -> Term<'a> {
+            tokenizer.next().unwrap().unwrap();
+
+            term
+        };
+
+        Ok(match st.token {
+            Token::IntegerConstant(integer) => simple_term(Term::IntegerConstant(integer)),
+            Token::StringConstant => simple_term(Term::StringConstant(st.source)),
+            Token::Keyword(Keyword::True) => simple_term(Term::True),
+            Token::Keyword(Keyword::False) => simple_term(Term::False),
+            Token::Keyword(Keyword::Null) => simple_term(Term::Null),
+            Token::Keyword(Keyword::This) => simple_term(Term::This),
+            Token::Identifier => {
+                let next = tokenizer.peek_1().ok_or(ParserError::UnexpectedEof)??.token;
+                match next {
+                    // TODO
+                    Token::Symbol(Symbol::LeftBracket) => todo!(),
+                    Token::Symbol(Symbol::LeftParen | Symbol::Dot) => {
+                        Term::SubroutineCall(SubroutineCall::parse(tokenizer)?)
+                    }
+                    _ => {
+                        tokenizer.next().unwrap().unwrap();
+
+                        Term::VarName(st.source)
+                    }
                 }
-                _ => Term::VarName(source),
-            },
-            _ => todo!("Term; {token:?}"),
+            }
+            _ => todo!(),
         })
     }
 }
@@ -105,7 +121,6 @@ impl<'a> SubroutineCall<'a> {
             }
         }
         eat!(tokenizer, Token::Symbol(Symbol::RightParen))?;
-        eat!(tokenizer, Token::Symbol(Symbol::Semicolon))?;
 
         Ok(SubroutineCall { var, subroutine, arguments })
     }

@@ -132,6 +132,7 @@ impl<'a> DoStatement<'a> {
     pub(crate) fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParserError<'a>> {
         eat!(tokenizer, Token::Keyword(Keyword::Do))?;
         let call = SubroutineCall::parse(tokenizer)?;
+        eat!(tokenizer, Token::Symbol(Symbol::Semicolon))?;
 
         Ok(DoStatement { call })
     }
