@@ -1,6 +1,6 @@
 use std::iter::Peekable;
 
-use crate::parser::expression::Expression;
+use crate::parser::expression::{Expression, SubroutineCall};
 use crate::parser::utils::{self, eat, peek_token};
 use crate::parser::ParserError;
 use crate::tokenizer::{Keyword, Symbol, Token, Tokenizer};
@@ -137,14 +137,17 @@ impl<'a> WhileStatement<'a> {
 
 #[derive(Debug)]
 pub(crate) struct DoStatement {
-    pub(crate) subroutine_call: (),
+    pub(crate) call: SubroutineCall,
 }
 
 impl DoStatement {
     pub(crate) fn parse<'a>(
         tokenizer: &mut Peekable<&mut Tokenizer<'a>>,
     ) -> Result<Self, ParserError<'a>> {
-        todo!()
+        eat!(tokenizer, Token::Keyword(Keyword::Do))?;
+        let call = SubroutineCall::parse(tokenizer)?;
+
+        Ok(DoStatement { call })
     }
 }
 

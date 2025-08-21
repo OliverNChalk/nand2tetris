@@ -33,6 +33,17 @@ pub(crate) enum Term<'a> {
 }
 
 #[derive(Debug)]
+pub(crate) struct SubroutineCall;
+
+impl SubroutineCall {
+    pub(crate) fn parse<'a>(
+        tokenizer: &mut Peekable<&mut Tokenizer<'a>>,
+    ) -> Result<Self, ParserError<'a>> {
+        todo!()
+    }
+}
+
+#[derive(Debug)]
 pub(crate) enum Op {
     Plus,
     Minus,
