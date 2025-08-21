@@ -160,6 +160,13 @@ impl<'a> ReturnStatement<'a> {
     pub(crate) fn parse(
         tokenizer: &mut Peekable<&mut Tokenizer<'a>>,
     ) -> Result<Self, ParserError<'a>> {
-        todo!()
+        eat!(tokenizer, Token::Keyword(Keyword::Return))?;
+        let return_value = match peek_token(tokenizer, Token::Symbol(Symbol::Semicolon)) {
+            true => None,
+            false => Some(Expression::parse(tokenizer)?),
+        };
+        eat!(tokenizer, Token::Symbol(Symbol::Semicolon))?;
+
+        Ok(ReturnStatement { return_value })
     }
 }
