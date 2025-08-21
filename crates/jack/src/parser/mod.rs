@@ -1,19 +1,14 @@
+mod expression;
+mod statement;
+mod utils;
+
 use std::iter::Peekable;
 
 use thiserror::Error;
 
+use crate::parser::statement::Statement;
+use crate::parser::utils::eat;
 use crate::tokenizer::{Keyword, SourceToken, Symbol, Token, TokenizeError, Tokenizer};
-
-macro_rules! eat {
-    ($tokenizer:expr, $expected:pat) => {{
-        let SourceToken { source, token } = $tokenizer.next().unwrap()?;
-        if !matches!(token, $expected) {
-            return Err(ParserError::UnexpectedToken(SourceToken { source, token }));
-        }
-
-        Ok::<_, ParserError>(source)
-    }};
-}
 
 pub(crate) struct Parser;
 
@@ -301,7 +296,7 @@ impl<'a> Type<'a> {
 #[derive(Debug)]
 pub(crate) struct SubroutineBody<'a> {
     variables: Vec<SubroutineVariableDeclaration<'a>>,
-    statements: Vec<Statement>,
+    statements: Vec<Statement<'a>>,
 }
 
 impl<'a> SubroutineBody<'a> {
@@ -310,7 +305,7 @@ impl<'a> SubroutineBody<'a> {
 
         // Eat all variable declarations.
         let mut variables = Vec::default();
-        while peek_token(tokenizer, Token::Keyword(Keyword::Var)) {
+        while utils::peek_token(tokenizer, Token::Keyword(Keyword::Var)) {
             // Eat the first variable.
             eat!(tokenizer, Token::Keyword(Keyword::Var))?;
             let var_type = Type::parse(tokenizer)?;
@@ -318,7 +313,7 @@ impl<'a> SubroutineBody<'a> {
 
             // Eat the remaining variables.
             variables.push(SubroutineVariableDeclaration { var_type, name });
-            while peek_token(tokenizer, Token::Symbol(Symbol::Comma)) {
+            while utils::peek_token(tokenizer, Token::Symbol(Symbol::Comma)) {
                 eat!(tokenizer, Token::Symbol(Symbol::Comma))?;
                 variables.push(SubroutineVariableDeclaration {
                     var_type,
@@ -329,7 +324,7 @@ impl<'a> SubroutineBody<'a> {
 
         // Eat all statements.
         let mut statements = Vec::default();
-        while !peek_token(tokenizer, Token::Symbol(Symbol::RightBrace)) {
+        while !utils::peek_token(tokenizer, Token::Symbol(Symbol::RightBrace)) {
             statements.push(Statement::parse(tokenizer)?);
         }
 
@@ -341,23 +336,4 @@ impl<'a> SubroutineBody<'a> {
 pub(crate) struct SubroutineVariableDeclaration<'a> {
     var_type: Type<'a>,
     name: &'a str,
-}
-
-impl<'a> SubroutineVariableDeclaration<'a> {}
-
-#[derive(Debug)]
-pub(crate) struct Statement {}
-
-impl Statement {
-    fn parse<'a>(tokenizer: &mut Peekable<Tokenizer>) -> Result<Self, ParserError<'a>> {
-        todo!()
-    }
-}
-
-fn peek_token(tokenizer: &mut Peekable<Tokenizer>, expected: Token) -> bool {
-    let Some(Ok(st)) = tokenizer.peek() else {
-        return false;
-    };
-
-    st.token == expected
 }
