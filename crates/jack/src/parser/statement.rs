@@ -51,8 +51,10 @@ impl<'a> LetStatement<'a> {
         let index = match peek_token(tokenizer, Token::Symbol(Symbol::LeftBracket)) {
             true => {
                 eat!(tokenizer, Token::Symbol(Symbol::LeftBracket))?;
+                let expression = Expression::parse(tokenizer)?;
+                eat!(tokenizer, Token::Symbol(Symbol::RightBracket))?;
 
-                Some(Expression::parse(tokenizer)?)
+                Some(expression)
             }
             false => None,
         };
@@ -69,14 +71,38 @@ impl<'a> LetStatement<'a> {
 pub(crate) struct IfStatement<'a> {
     pub(crate) expression: Expression<'a>,
     pub(crate) if_statements: Vec<Statement<'a>>,
-    pub(crate) else_statement: Vec<Statement<'a>>,
+    pub(crate) else_statements: Vec<Statement<'a>>,
 }
 
 impl<'a> IfStatement<'a> {
     pub(crate) fn parse(
         tokenizer: &mut Peekable<&mut Tokenizer<'a>>,
     ) -> Result<Self, ParserError<'a>> {
-        todo!()
+        // Eat the condition expression.
+        eat!(tokenizer, Token::Keyword(Keyword::If))?;
+        eat!(tokenizer, Token::Symbol(Symbol::LeftParen))?;
+        let expression = Expression::parse(tokenizer)?;
+        eat!(tokenizer, Token::Symbol(Symbol::RightParen))?;
+
+        // Eat the braces & all statements
+        eat!(tokenizer, Token::Symbol(Symbol::LeftBrace))?;
+        let mut if_statements = Vec::default();
+        while !peek_token(tokenizer, Token::Symbol(Symbol::RightBrace)) {
+            if_statements.push(Statement::parse(tokenizer)?);
+        }
+
+        // Maybe eat the else statements.
+        let mut else_statements = Vec::default();
+        if peek_token(tokenizer, Token::Keyword(Keyword::Else)) {
+            eat!(tokenizer, Token::Keyword(Keyword::Else))?;
+            eat!(tokenizer, Token::Symbol(Symbol::LeftBrace))?;
+            while !peek_token(tokenizer, Token::Symbol(Symbol::RightBrace)) {
+                else_statements.push(Statement::parse(tokenizer)?);
+            }
+            eat!(tokenizer, Token::Symbol(Symbol::RightBrace))?;
+        }
+
+        Ok(IfStatement { expression, if_statements, else_statements })
     }
 }
 
