@@ -11,7 +11,7 @@ pub(crate) enum Statement<'a> {
     If(IfStatement<'a>),
     While(WhileStatement<'a>),
     Do(DoStatement),
-    Return(ReturnStatement),
+    Return(ReturnStatement<'a>),
 }
 
 impl<'a> Statement<'a> {
@@ -31,8 +31,8 @@ impl<'a> Statement<'a> {
 #[derive(Debug)]
 pub(crate) struct LetStatement<'a> {
     pub(crate) var_name: &'a str,
-    pub(crate) index: Option<Expression>,
-    pub(crate) expression: Expression,
+    pub(crate) index: Option<Expression<'a>>,
+    pub(crate) expression: Expression<'a>,
 }
 
 impl<'a> LetStatement<'a> {
@@ -60,7 +60,7 @@ impl<'a> LetStatement<'a> {
 
 #[derive(Debug)]
 pub(crate) struct IfStatement<'a> {
-    pub(crate) expression: Expression,
+    pub(crate) expression: Expression<'a>,
     pub(crate) if_statements: Vec<Statement<'a>>,
     pub(crate) else_statement: Vec<Statement<'a>>,
 }
@@ -73,7 +73,7 @@ impl<'a> IfStatement<'a> {
 
 #[derive(Debug)]
 pub(crate) struct WhileStatement<'a> {
-    pub(crate) expression: Expression,
+    pub(crate) expression: Expression<'a>,
     pub(crate) statements: Vec<Statement<'a>>,
 }
 
@@ -97,14 +97,12 @@ impl DoStatement {
 }
 
 #[derive(Debug)]
-pub(crate) struct ReturnStatement {
-    pub(crate) return_value: Option<Expression>,
+pub(crate) struct ReturnStatement<'a> {
+    pub(crate) return_value: Option<Expression<'a>>,
 }
 
-impl ReturnStatement {
-    pub(crate) fn parse<'a>(
-        tokenizer: &mut Peekable<Tokenizer<'a>>,
-    ) -> Result<Self, ParserError<'a>> {
+impl<'a> ReturnStatement<'a> {
+    pub(crate) fn parse(tokenizer: &mut Peekable<Tokenizer<'a>>) -> Result<Self, ParserError<'a>> {
         todo!()
     }
 }
