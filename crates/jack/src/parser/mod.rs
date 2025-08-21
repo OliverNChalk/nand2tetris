@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 mod expression;
 mod statement;
 mod structure;
