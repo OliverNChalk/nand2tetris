@@ -1,26 +1,93 @@
-use crate::parser::structure::Class;
+use hashbrown::hash_map::Entry;
+use hashbrown::HashMap;
 
-pub(crate) fn compile(class: &Class) -> Vec<String> {
+use crate::parser::structure::{Class, FieldModifier};
+
+pub(crate) fn compile<'a>(class: &Class<'a>) -> Result<Vec<String>, CompileError<'a>> {
     let mut code = Vec::default();
 
+    // Setup the class context before compiling methods.
+    let mut indexes = Indexes::default();
+    let mut symbols = HashMap::default();
     for variable in &class.variables {
-        todo!();
-    }
+        match symbols.entry(variable.name) {
+            Entry::Occupied(_) => return Err(CompileError::DuplicateSymbol(variable.name)),
+            Entry::Vacant(entry) => {
+                let (category, index) = match variable.modifier {
+                    FieldModifier::Field => (SymbolCategory::Field, indexes.next_field()),
+                    FieldModifier::Static => (SymbolCategory::Static, indexes.next_static()),
+                };
 
+                entry.insert(SymbolEntry { name: variable.name, category, index })
+            }
+        };
+    }
+    let context = ClassContext { name: class.name, symbols };
+
+    // Generate the code for each subroutine in the class.
     for subroutine in &class.subroutines {
-        // Function boilerplate.
-        code.push(format!(
-            "function {}.{} {}",
-            class.name,
-            subroutine.name,
-            subroutine.body.variables.len()
-        ));
-        code.push("push argument 0".to_string());
-        code.push("pop pointer 0".to_string());
-
-        // Function body.
-        code.extend(subroutine.body.compile());
+        code.extend(subroutine.compile(&context));
     }
 
-    code
+    Ok(code)
+}
+
+pub(crate) enum CompileError<'a> {
+    DuplicateSymbol(&'a str),
+}
+
+#[derive(Debug, Default)]
+struct Indexes {
+    field: u16,
+    class_static: u16,
+    local: u16,
+    arg: u16,
+}
+
+impl Indexes {
+    fn next_field(&mut self) -> u16 {
+        let next = self.field;
+        self.field += 1;
+
+        next
+    }
+
+    fn next_static(&mut self) -> u16 {
+        let next = self.class_static;
+        self.class_static += 1;
+
+        next
+    }
+
+    fn next_local(&mut self) -> u16 {
+        let next = self.local;
+        self.local += 1;
+
+        next
+    }
+
+    fn next_arg(&mut self) -> u16 {
+        let next = self.arg;
+        self.arg += 1;
+
+        next
+    }
+}
+
+pub(crate) struct ClassContext<'a> {
+    pub(crate) name: &'a str,
+    pub(crate) symbols: HashMap<&'a str, SymbolEntry<'a>>,
+}
+
+pub(crate) struct SymbolEntry<'a> {
+    pub(crate) name: &'a str,
+    pub(crate) category: SymbolCategory,
+    pub(crate) index: u16,
+}
+
+pub(crate) enum SymbolCategory {
+    Field,
+    Static,
+    Local,
+    Arg,
 }

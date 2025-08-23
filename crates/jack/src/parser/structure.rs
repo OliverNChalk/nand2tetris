@@ -1,3 +1,4 @@
+use crate::code_gen::ClassContext;
 use crate::parser::error::ParserError;
 use crate::parser::statement::Statement;
 use crate::parser::utils::{check_next, eat, peek};
@@ -5,7 +6,7 @@ use crate::tokenizer::{Keyword, SourceToken, Symbol, Token, Tokenizer};
 
 #[derive(Debug)]
 pub(crate) struct Class<'a> {
-    pub(crate) name: String,
+    pub(crate) name: &'a str,
     pub(crate) variables: Vec<ClassVariableDeclaration<'a>>,
     pub(crate) subroutines: Vec<SubroutineDeclaration<'a>>,
 }
@@ -68,7 +69,7 @@ impl<'a> Class<'a> {
         }
 
         // Next we eat the body of the class.
-        let class = Class { name: class_name.to_string(), variables, subroutines };
+        let class = Class { name: class_name, variables, subroutines };
 
         // Finally we finish up the class declaration.
         eat!(tokenizer, Token::Symbol(Symbol::RightBrace))?;
@@ -176,6 +177,20 @@ impl<'a> SubroutineDeclaration<'a> {
         let body = SubroutineBody::parse(tokenizer)?;
 
         Ok(SubroutineDeclaration { subroutine_type, return_type, name, parameters, body })
+    }
+
+    pub(crate) fn compile(&self, context: &ClassContext) -> Vec<String> {
+        let mut code = Vec::default();
+
+        // Function boilerplate.
+        code.push(format!("function {}.{} {}", context.name, self.name, self.body.variables.len()));
+        code.push("push argument 0".to_string());
+        code.push("pop pointer 0".to_string());
+
+        // Function body.
+        code.extend(self.body.compile());
+
+        code
     }
 }
 
