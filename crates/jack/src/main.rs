@@ -1,11 +1,10 @@
-use crate::parser::structure::Class;
-
 mod args;
 mod code_gen;
 mod parser;
 mod tokenizer;
 
 fn main() -> std::process::ExitCode {
+    use std::fmt::Display;
     use std::io::{BufWriter, Write};
     use std::process::ExitCode;
 
@@ -13,9 +12,10 @@ fn main() -> std::process::ExitCode {
 
     use crate::args::Action;
     use crate::parser::error::ParseError;
+    use crate::parser::structure::Class;
     use crate::tokenizer::Tokenizer;
 
-    fn print_error(tokenizer: Tokenizer, err: ParseError) {
+    fn print_error(tokenizer: Tokenizer, err: impl Display) {
         eprintln!("Failed to parse provided source file, the next two unparsed lines are:");
         for line in tokenizer.remaining().lines().take(3) {
             eprintln!("==> {line}");
@@ -62,7 +62,18 @@ fn main() -> std::process::ExitCode {
                 }
             };
 
-            code_gen::compile(&class);
+            match code_gen::compile(&class) {
+                Ok(code) => {
+                    for code in code {
+                        println!("{code}");
+                    }
+                }
+                Err(err) => {
+                    print_error(tokenizer, err);
+
+                    return ExitCode::FAILURE;
+                }
+            }
         }
     }
 

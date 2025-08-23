@@ -1,5 +1,6 @@
 use hashbrown::hash_map::Entry;
 use hashbrown::HashMap;
+use thiserror::Error;
 
 use crate::parser::structure::{Class, FieldModifier, Type};
 
@@ -37,8 +38,11 @@ pub(crate) fn compile<'a>(class: &Class<'a>) -> Result<Vec<String>, CompileError
     Ok(code)
 }
 
+#[derive(Debug, Error)]
 pub(crate) enum CompileError<'a> {
+    #[error("Duplicate symbol; symbol={0}")]
     DuplicateSymbol(&'a str),
+    #[error("Invalid callee; callee={0}")]
     InvalidCallee(&'a str),
 }
 
