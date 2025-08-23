@@ -1,4 +1,4 @@
-use crate::parser::ParserError;
+use crate::parser::error::ParserError;
 use crate::tokenizer::{Token, Tokenizer};
 
 pub(crate) fn next<'a>(tokenizer: &mut Tokenizer<'a>) -> Result<Token, ParserError<'a>> {

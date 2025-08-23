@@ -1,6 +1,6 @@
+use crate::parser::error::ParserError;
 use crate::parser::expression::{Expression, SubroutineCall};
 use crate::parser::utils::{check_next, eat};
-use crate::parser::ParserError;
 use crate::tokenizer::{Keyword, Symbol, Token, Tokenizer};
 
 #[derive(Debug)]

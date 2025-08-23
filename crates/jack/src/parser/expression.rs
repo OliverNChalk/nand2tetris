@@ -1,5 +1,5 @@
 use crate::parser::utils::{check_next, eat, peek};
-use crate::parser::ParserError;
+use crate::parser::error::ParserError;
 use crate::tokenizer::{Keyword, Symbol, Token, Tokenizer};
 
 #[derive(Debug)]

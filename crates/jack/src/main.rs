@@ -1,3 +1,5 @@
+use crate::parser::structure::Class;
+
 mod args;
 mod code_gen;
 mod parser;
@@ -10,7 +12,7 @@ fn main() -> std::process::ExitCode {
     use clap::Parser as _;
 
     use crate::args::Action;
-    use crate::parser::{Parser, ParserError};
+    use crate::parser::error::ParserError;
     use crate::tokenizer::Tokenizer;
 
     fn print_error(tokenizer: Tokenizer, err: ParserError) {
@@ -42,7 +44,7 @@ fn main() -> std::process::ExitCode {
             }
             writeln!(output, "</tokens>").unwrap();
         }
-        Action::Parse => match Parser::parse(&mut tokenizer) {
+        Action::Parse => match Class::parse(&mut tokenizer) {
             Ok(class) => println!("{class:#?}"),
             Err(err) => {
                 print_error(tokenizer, err);
@@ -51,7 +53,7 @@ fn main() -> std::process::ExitCode {
             }
         },
         Action::Compile => {
-            let class = match Parser::parse(&mut tokenizer) {
+            let class = match Class::parse(&mut tokenizer) {
                 Ok(class) => class,
                 Err(err) => {
                     print_error(tokenizer, err);
