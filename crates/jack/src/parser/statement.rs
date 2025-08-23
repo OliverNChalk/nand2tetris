@@ -1,3 +1,6 @@
+use hashbrown::HashMap;
+
+use crate::code_gen::{ClassContext, SymbolEntry};
 use crate::parser::error::ParserError;
 use crate::parser::expression::{Expression, SubroutineCall};
 use crate::parser::utils::{check_next, eat};
@@ -25,7 +28,11 @@ impl<'a> Statement<'a> {
         }
     }
 
-    pub(crate) fn compile(&self) -> Vec<String> {
+    pub(crate) fn compile(
+        &self,
+        context: &ClassContext,
+        subroutine_symbols: &HashMap<&str, SymbolEntry>,
+    ) -> Vec<String> {
         match self {
             Self::Do(stmt) => stmt.compile(),
             _ => todo!(),

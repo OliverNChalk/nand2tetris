@@ -1,4 +1,7 @@
-use crate::code_gen::ClassContext;
+use hashbrown::hash_map::Entry;
+use hashbrown::HashMap;
+
+use crate::code_gen::{ClassContext, CompileError, SymbolCategory, SymbolEntry};
 use crate::parser::error::ParserError;
 use crate::parser::statement::Statement;
 use crate::parser::utils::{check_next, eat, peek};
@@ -179,18 +182,39 @@ impl<'a> SubroutineDeclaration<'a> {
         Ok(SubroutineDeclaration { subroutine_type, return_type, name, parameters, body })
     }
 
-    pub(crate) fn compile(&self, context: &ClassContext) -> Vec<String> {
-        let mut code = Vec::default();
+    pub(crate) fn compile(&self, context: &ClassContext) -> Result<Vec<String>, CompileError<'a>> {
+        // Construct the subroutine's nested symbol table.
+        let mut subroutine_symbols: HashMap<&'a str, SymbolEntry<'_>> = HashMap::default();
+        let params = self
+            .parameters
+            .iter()
+            .map(|param| (param.name, SymbolCategory::Arg))
+            .enumerate();
+        let vars = self
+            .body
+            .variables
+            .iter()
+            .map(|var| (var.name, SymbolCategory::Local))
+            .enumerate();
+        for (i, (name, category)) in params.chain(vars) {
+            match subroutine_symbols.entry(name) {
+                Entry::Occupied(_) => return Err(CompileError::DuplicateSymbol(name)),
+                Entry::Vacant(entry) => {
+                    entry.insert(SymbolEntry { name, category, index: u16::try_from(i).unwrap() })
+                }
+            };
+        }
 
         // Function boilerplate.
+        let mut code = Vec::default();
         code.push(format!("function {}.{} {}", context.name, self.name, self.body.variables.len()));
         code.push("push argument 0".to_string());
         code.push("pop pointer 0".to_string());
 
         // Function body.
-        code.extend(self.body.compile());
+        code.extend(self.body.compile(context, &subroutine_symbols));
 
-        code
+        Ok(code)
     }
 }
 
@@ -268,10 +292,14 @@ impl<'a> SubroutineBody<'a> {
         Ok(SubroutineBody { variables, statements })
     }
 
-    pub(crate) fn compile(&self) -> Vec<String> {
+    pub(crate) fn compile(
+        &self,
+        context: &ClassContext,
+        subroutine_symbols: &HashMap<&str, SymbolEntry>,
+    ) -> Vec<String> {
         self.statements
             .iter()
-            .flat_map(|statement| statement.compile())
+            .flat_map(|statement| statement.compile(context, subroutine_symbols))
             .collect()
     }
 }

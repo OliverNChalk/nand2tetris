@@ -7,7 +7,7 @@ pub(crate) fn compile<'a>(class: &Class<'a>) -> Result<Vec<String>, CompileError
     let mut code = Vec::default();
 
     // Setup the class context before compiling methods.
-    let mut indexes = Indexes::default();
+    let mut indexes = Indices::default();
     let mut symbols = HashMap::default();
     for variable in &class.variables {
         match symbols.entry(variable.name) {
@@ -26,7 +26,7 @@ pub(crate) fn compile<'a>(class: &Class<'a>) -> Result<Vec<String>, CompileError
 
     // Generate the code for each subroutine in the class.
     for subroutine in &class.subroutines {
-        code.extend(subroutine.compile(&context));
+        code.extend(subroutine.compile(&context)?);
     }
 
     Ok(code)
@@ -37,14 +37,12 @@ pub(crate) enum CompileError<'a> {
 }
 
 #[derive(Debug, Default)]
-struct Indexes {
+struct Indices {
     field: u16,
     class_static: u16,
-    local: u16,
-    arg: u16,
 }
 
-impl Indexes {
+impl Indices {
     fn next_field(&mut self) -> u16 {
         let next = self.field;
         self.field += 1;
@@ -55,20 +53,6 @@ impl Indexes {
     fn next_static(&mut self) -> u16 {
         let next = self.class_static;
         self.class_static += 1;
-
-        next
-    }
-
-    fn next_local(&mut self) -> u16 {
-        let next = self.local;
-        self.local += 1;
-
-        next
-    }
-
-    fn next_arg(&mut self) -> u16 {
-        let next = self.arg;
-        self.arg += 1;
 
         next
     }
