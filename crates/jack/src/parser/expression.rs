@@ -1,7 +1,7 @@
 use hashbrown::HashMap;
 
 use crate::code_gen::{ClassContext, CompileError, SymbolCategory, SymbolEntry};
-use crate::parser::error::ParserError;
+use crate::parser::error::ParseError;
 use crate::parser::structure::Type;
 use crate::parser::utils::{check_next, eat, peek};
 use crate::tokenizer::{Keyword, Symbol, Token, Tokenizer};
@@ -13,7 +13,7 @@ pub(crate) struct Expression<'a> {
 }
 
 impl<'a> Expression<'a> {
-    pub(crate) fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParserError<'a>> {
+    pub(crate) fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParseError<'a>> {
         let term = Box::new(Term::parse(tokenizer)?);
 
         // Eat the op if one exists.
@@ -34,6 +34,14 @@ impl<'a> Expression<'a> {
 
         Ok(Expression { term, op })
     }
+
+    pub(crate) fn compile(
+        &self,
+        class: &ClassContext,
+        subroutine: &HashMap<&str, SymbolEntry>,
+    ) -> Result<Vec<String>, CompileError<'a>> {
+        todo!()
+    }
 }
 
 #[derive(Debug)]
@@ -52,8 +60,8 @@ pub(crate) enum Term<'a> {
 }
 
 impl<'a> Term<'a> {
-    fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParserError<'a>> {
-        let st = tokenizer.peek_0().ok_or(ParserError::UnexpectedEof)??;
+    fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParseError<'a>> {
+        let st = tokenizer.peek_0().ok_or(ParseError::UnexpectedEof)??;
         let mut simple_term = |term: Term<'a>| -> Term<'a> {
             tokenizer.next().unwrap().unwrap();
 
@@ -87,7 +95,7 @@ impl<'a> Term<'a> {
                 Term::Expression(expression)
             }
             Token::Identifier => {
-                let next = tokenizer.peek_1().ok_or(ParserError::UnexpectedEof)??.token;
+                let next = tokenizer.peek_1().ok_or(ParseError::UnexpectedEof)??.token;
                 match next {
                     Token::Symbol(Symbol::LeftBracket) => {
                         Term::VariableIndex(VariableIndex::parse(tokenizer)?)
@@ -102,7 +110,7 @@ impl<'a> Term<'a> {
                     }
                 }
             }
-            _ => return Err(ParserError::UnexpectedToken(tokenizer.next().unwrap().unwrap())),
+            _ => return Err(ParseError::UnexpectedToken(tokenizer.next().unwrap().unwrap())),
         })
     }
 }
@@ -114,13 +122,13 @@ pub(crate) struct VariableIndex<'a> {
 }
 
 impl<'a> VariableIndex<'a> {
-    fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParserError<'a>> {
+    fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParseError<'a>> {
         let var = eat!(tokenizer, Token::Identifier)?;
         eat!(tokenizer, Token::Symbol(Symbol::LeftBracket))?;
-        let index = tokenizer.next().ok_or(ParserError::UnexpectedEof)??;
+        let index = tokenizer.next().ok_or(ParseError::UnexpectedEof)??;
         eat!(tokenizer, Token::Symbol(Symbol::RightBracket))?;
         let Token::IntegerConstant(index) = index.token else {
-            return Err(ParserError::UnexpectedToken(index));
+            return Err(ParseError::UnexpectedToken(index));
         };
 
         Ok(Self { var, index })
@@ -135,7 +143,7 @@ pub(crate) struct SubroutineCall<'a> {
 }
 
 impl<'a> SubroutineCall<'a> {
-    pub(crate) fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParserError<'a>> {
+    pub(crate) fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParseError<'a>> {
         // No matter what, a subroutine call begins with an identifier (class, variable,
         // or subroutine).
         let first_identifier = eat!(tokenizer, Token::Identifier)?;
@@ -234,8 +242,8 @@ pub(crate) enum Op {
 }
 
 impl Op {
-    pub(crate) fn parse<'a>(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParserError<'a>> {
-        let st = tokenizer.next().ok_or(ParserError::UnexpectedEof)??;
+    pub(crate) fn parse<'a>(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParseError<'a>> {
+        let st = tokenizer.next().ok_or(ParseError::UnexpectedEof)??;
         match st.token {
             Token::Symbol(Symbol::Plus) => Ok(Self::Plus),
             Token::Symbol(Symbol::Minus) => Ok(Self::Minus),
@@ -246,7 +254,7 @@ impl Op {
             Token::Symbol(Symbol::LeftAngleBracket) => Ok(Self::Lt),
             Token::Symbol(Symbol::RightAngleBracket) => Ok(Self::Gt),
             Token::Symbol(Symbol::Equals) => Ok(Self::Equals),
-            _ => Err(ParserError::UnexpectedToken(st)),
+            _ => Err(ParseError::UnexpectedToken(st)),
         }
     }
 }

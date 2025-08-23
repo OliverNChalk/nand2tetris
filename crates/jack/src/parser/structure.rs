@@ -2,7 +2,7 @@ use hashbrown::hash_map::Entry;
 use hashbrown::HashMap;
 
 use crate::code_gen::{ClassContext, CompileError, SymbolCategory, SymbolEntry};
-use crate::parser::error::ParserError;
+use crate::parser::error::ParseError;
 use crate::parser::statement::Statement;
 use crate::parser::utils::{check_next, eat, peek};
 use crate::tokenizer::{Keyword, SourceToken, Symbol, Token, Tokenizer};
@@ -15,7 +15,7 @@ pub(crate) struct Class<'a> {
 }
 
 impl<'a> Class<'a> {
-    pub(crate) fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParserError<'a>> {
+    pub(crate) fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParseError<'a>> {
         // All Jack files must contain exactly one class, so lets start by eating the
         // beginning of the class declaration.
         eat!(tokenizer, Token::Keyword(Keyword::Class))?;
@@ -35,13 +35,13 @@ impl<'a> Class<'a> {
 
             // Eat the type.
             let SourceToken { source, token } =
-                tokenizer.next().ok_or(ParserError::UnexpectedEof)??;
+                tokenizer.next().ok_or(ParseError::UnexpectedEof)??;
             let var_type = match token {
                 Token::Keyword(Keyword::Int) => Type::Int,
                 Token::Keyword(Keyword::Char) => Type::Char,
                 Token::Keyword(Keyword::Boolean) => Type::Boolean,
                 Token::Identifier => Type::Class(source),
-                _ => return Err(ParserError::UnexpectedToken(SourceToken { source, token })),
+                _ => return Err(ParseError::UnexpectedToken(SourceToken { source, token })),
             };
 
             // Eat the first variable name.
@@ -113,23 +113,22 @@ pub(crate) struct SubroutineDeclaration<'a> {
 }
 
 impl<'a> SubroutineDeclaration<'a> {
-    fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParserError<'a>> {
+    fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParseError<'a>> {
         // Eat the function category.
         let subroutine_type = tokenizer.next().unwrap()?;
         let subroutine_type = match subroutine_type.token {
             Token::Keyword(Keyword::Constructor) => SubroutineType::Constructor,
             Token::Keyword(Keyword::Function) => SubroutineType::Function,
             Token::Keyword(Keyword::Method) => SubroutineType::Method,
-            _ => return Err(ParserError::UnexpectedToken(subroutine_type)),
+            _ => return Err(ParseError::UnexpectedToken(subroutine_type)),
         };
 
         // Eat the return type.
-        let SourceToken { source, token } =
-            tokenizer.next().ok_or(ParserError::UnexpectedEof)??;
+        let SourceToken { source, token } = tokenizer.next().ok_or(ParseError::UnexpectedEof)??;
         let return_type = match token {
             Token::Keyword(Keyword::Void) => ReturnType::Void,
             Token::Identifier => ReturnType::Class(source),
-            _ => return Err(ParserError::UnexpectedToken(SourceToken { source, token })),
+            _ => return Err(ParseError::UnexpectedToken(SourceToken { source, token })),
         };
 
         // Eat the subroutine name.
@@ -173,7 +172,7 @@ impl<'a> SubroutineDeclaration<'a> {
             parameters.push(ParameterDeclaration { parameter_type, name })
         }
         if more {
-            return Err(ParserError::TrailingComma);
+            return Err(ParseError::TrailingComma);
         }
         eat!(tokenizer, Token::Symbol(Symbol::RightParen))?;
 
@@ -241,15 +240,15 @@ pub(crate) struct ParameterDeclaration<'a> {
 }
 
 impl<'a> Type<'a> {
-    pub(crate) fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParserError<'a>> {
-        let st = tokenizer.next().ok_or(ParserError::UnexpectedEof)??;
+    pub(crate) fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParseError<'a>> {
+        let st = tokenizer.next().ok_or(ParseError::UnexpectedEof)??;
 
         match st.token {
             Token::Keyword(Keyword::Int) => Ok(Self::Int),
             Token::Keyword(Keyword::Char) => Ok(Self::Char),
             Token::Keyword(Keyword::Boolean) => Ok(Self::Boolean),
             Token::Identifier => Ok(Self::Class(st.source)),
-            _ => Err(ParserError::UnexpectedToken(st)),
+            _ => Err(ParseError::UnexpectedToken(st)),
         }
     }
 }
@@ -261,7 +260,7 @@ pub(crate) struct SubroutineBody<'a> {
 }
 
 impl<'a> SubroutineBody<'a> {
-    pub(crate) fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParserError<'a>> {
+    pub(crate) fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParseError<'a>> {
         eat!(tokenizer, Token::Symbol(Symbol::LeftBrace))?;
 
         // Eat all variable declarations.

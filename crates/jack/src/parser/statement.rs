@@ -1,7 +1,7 @@
 use hashbrown::HashMap;
 
 use crate::code_gen::{ClassContext, CompileError, SymbolEntry};
-use crate::parser::error::ParserError;
+use crate::parser::error::ParseError;
 use crate::parser::expression::{Expression, SubroutineCall};
 use crate::parser::utils::{check_next, eat};
 use crate::tokenizer::{Keyword, Symbol, Token, Tokenizer};
@@ -16,15 +16,15 @@ pub(crate) enum Statement<'a> {
 }
 
 impl<'a> Statement<'a> {
-    pub(crate) fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParserError<'a>> {
-        let st = tokenizer.peek_0().ok_or(ParserError::UnexpectedEof)??;
+    pub(crate) fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParseError<'a>> {
+        let st = tokenizer.peek_0().ok_or(ParseError::UnexpectedEof)??;
         match st.token {
             Token::Keyword(Keyword::Let) => LetStatement::parse(tokenizer).map(Self::Let),
             Token::Keyword(Keyword::If) => IfStatement::parse(tokenizer).map(Self::If),
             Token::Keyword(Keyword::While) => WhileStatement::parse(tokenizer).map(Self::While),
             Token::Keyword(Keyword::Do) => DoStatement::parse(tokenizer).map(Self::Do),
             Token::Keyword(Keyword::Return) => ReturnStatement::parse(tokenizer).map(Self::Return),
-            _ => Err(ParserError::UnexpectedToken(st)),
+            _ => Err(ParseError::UnexpectedToken(st)),
         }
     }
 
@@ -49,7 +49,7 @@ pub(crate) struct LetStatement<'a> {
 }
 
 impl<'a> LetStatement<'a> {
-    pub(crate) fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParserError<'a>> {
+    pub(crate) fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParseError<'a>> {
         eat!(tokenizer, Token::Keyword(Keyword::Let))?;
         let var_name = eat!(tokenizer, Token::Identifier)?;
 
@@ -82,7 +82,7 @@ pub(crate) struct IfStatement<'a> {
 }
 
 impl<'a> IfStatement<'a> {
-    pub(crate) fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParserError<'a>> {
+    pub(crate) fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParseError<'a>> {
         // Eat the condition expression.
         eat!(tokenizer, Token::Keyword(Keyword::If))?;
         eat!(tokenizer, Token::Symbol(Symbol::LeftParen))?;
@@ -119,7 +119,7 @@ pub(crate) struct WhileStatement<'a> {
 }
 
 impl<'a> WhileStatement<'a> {
-    pub(crate) fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParserError<'a>> {
+    pub(crate) fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParseError<'a>> {
         // Eat the condition expression.
         eat!(tokenizer, Token::Keyword(Keyword::While))?;
         eat!(tokenizer, Token::Symbol(Symbol::LeftParen))?;
@@ -144,7 +144,7 @@ pub(crate) struct DoStatement<'a> {
 }
 
 impl<'a> DoStatement<'a> {
-    pub(crate) fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParserError<'a>> {
+    pub(crate) fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParseError<'a>> {
         eat!(tokenizer, Token::Keyword(Keyword::Do))?;
         let call = SubroutineCall::parse(tokenizer)?;
         eat!(tokenizer, Token::Symbol(Symbol::Semicolon))?;
@@ -167,7 +167,7 @@ pub(crate) struct ReturnStatement<'a> {
 }
 
 impl<'a> ReturnStatement<'a> {
-    pub(crate) fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParserError<'a>> {
+    pub(crate) fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParseError<'a>> {
         eat!(tokenizer, Token::Keyword(Keyword::Return))?;
         let return_value = match check_next(tokenizer, Token::Symbol(Symbol::Semicolon)) {
             true => None,
@@ -183,6 +183,12 @@ impl<'a> ReturnStatement<'a> {
         class: &ClassContext,
         subroutine: &HashMap<&str, SymbolEntry>,
     ) -> Result<Vec<String>, CompileError<'a>> {
-        todo!()
+        let mut code = match &self.return_value {
+            Some(expression) => expression.compile(class, subroutine)?,
+            None => vec!["push constant 0".to_string()],
+        };
+        code.push("return".to_string());
+
+        Ok(code)
     }
 }

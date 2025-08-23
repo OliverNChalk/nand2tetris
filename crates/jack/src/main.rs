@@ -12,10 +12,10 @@ fn main() -> std::process::ExitCode {
     use clap::Parser as _;
 
     use crate::args::Action;
-    use crate::parser::error::ParserError;
+    use crate::parser::error::ParseError;
     use crate::tokenizer::Tokenizer;
 
-    fn print_error(tokenizer: Tokenizer, err: ParserError) {
+    fn print_error(tokenizer: Tokenizer, err: ParseError) {
         eprintln!("Failed to parse provided source file, the next two unparsed lines are:");
         for line in tokenizer.remaining().lines().take(3) {
             eprintln!("==> {line}");
