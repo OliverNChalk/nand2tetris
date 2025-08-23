@@ -1,3 +1,5 @@
+use std::sync::atomic::AtomicU64;
+
 mod args;
 mod code_gen;
 mod parser;
@@ -61,7 +63,8 @@ fn main() -> std::process::ExitCode {
                 }
             };
 
-            match code_gen::compile(&class) {
+            let vm_symbols = Box::leak(Box::new(AtomicU64::new(0)));
+            match code_gen::compile(vm_symbols, &class) {
                 Ok(code) => {
                     for code in code {
                         println!("{code}");

@@ -1,10 +1,15 @@
+use std::sync::atomic::{AtomicU64, Ordering};
+
 use hashbrown::hash_map::Entry;
 use hashbrown::HashMap;
 use thiserror::Error;
 
 use crate::parser::structure::{Class, FieldModifier, Type};
 
-pub(crate) fn compile<'a>(class: &Class<'a>) -> Result<Vec<String>, CompileError<'a>> {
+pub(crate) fn compile<'a>(
+    vm_symbol_counter: &'static AtomicU64,
+    class: &Class<'a>,
+) -> Result<Vec<String>, CompileError<'a>> {
     let mut code = Vec::default();
 
     // Setup the class context before compiling methods.
@@ -28,7 +33,7 @@ pub(crate) fn compile<'a>(class: &Class<'a>) -> Result<Vec<String>, CompileError
             }
         };
     }
-    let context = ClassContext { name: class.name, symbols };
+    let context = ClassContext { name: class.name, symbols, vm_symbols: vm_symbol_counter };
 
     // Generate the code for each subroutine in the class.
     for subroutine in &class.subroutines {
@@ -73,6 +78,13 @@ impl Indices {
 pub(crate) struct ClassContext<'a> {
     pub(crate) name: &'a str,
     pub(crate) symbols: HashMap<&'a str, SymbolEntry<'a>>,
+    pub(crate) vm_symbols: &'static AtomicU64,
+}
+
+impl<'a> ClassContext<'a> {
+    pub(crate) fn next_label(&self) -> u64 {
+        self.vm_symbols.fetch_add(1, Ordering::Relaxed)
+    }
 }
 
 pub(crate) struct SymbolEntry<'a> {
@@ -98,5 +110,5 @@ pub(crate) enum SymbolCategory {
     Field,
     Static,
     Local,
-    Arg,
+    Argument,
 }

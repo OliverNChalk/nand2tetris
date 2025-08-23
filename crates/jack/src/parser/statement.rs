@@ -35,9 +35,10 @@ impl<'a> Statement<'a> {
     ) -> Result<Vec<String>, CompileError<'a>> {
         match self {
             Self::Let(stmt) => stmt.compile(class, subroutine),
+            Self::If(stmt) => stmt.compile(class, subroutine),
+            Self::While(stmt) => stmt.compile(class, subroutine),
             Self::Do(stmt) => stmt.compile(class, subroutine),
             Self::Return(stmt) => stmt.compile(class, subroutine),
-            stmt => todo!("{stmt:?}"),
         }
     }
 }
@@ -127,6 +128,30 @@ impl<'a> IfStatement<'a> {
 
         Ok(IfStatement { condition, if_statements, else_statements })
     }
+
+    pub(crate) fn compile(
+        &self,
+        class: &ClassContext,
+        subroutine: &HashMap<&str, SymbolEntry>,
+    ) -> Result<Vec<String>, CompileError<'a>> {
+        let label0 = class.next_label();
+        let label1 = class.next_label();
+
+        let mut code = self.condition.compile(class, subroutine)?;
+        code.push("not".to_string());
+        code.push(format!("if-goto L{label0}"));
+        for stmt in &self.if_statements {
+            code.extend(stmt.compile(class, subroutine)?);
+        }
+        code.push(format!("goto L{label1}"));
+        code.push(format!("label L{label0}"));
+        for stmt in &self.else_statements {
+            code.extend(stmt.compile(class, subroutine)?);
+        }
+        code.push(format!("label L{label1}"));
+
+        Ok(code)
+    }
 }
 
 #[derive(Debug)]
@@ -153,6 +178,27 @@ impl<'a> WhileStatement<'a> {
 
         Ok(WhileStatement { condition, statements })
     }
+
+    pub(crate) fn compile(
+        &self,
+        class: &ClassContext,
+        subroutine: &HashMap<&str, SymbolEntry>,
+    ) -> Result<Vec<String>, CompileError<'a>> {
+        let label0 = class.next_label();
+        let label1 = class.next_label();
+
+        let mut code = vec![format!("label L{label0}")];
+        code.extend(self.condition.compile(class, subroutine)?);
+        code.push("not".to_string());
+        code.push(format!("if-goto L{label1}"));
+        for statement in &self.statements {
+            code.extend(statement.compile(class, subroutine)?);
+        }
+        code.push(format!("goto L{label0}"));
+        code.push(format!("label L{label1}"));
+
+        Ok(code)
+    }
 }
 
 #[derive(Debug)]
@@ -174,7 +220,10 @@ impl<'a> DoStatement<'a> {
         class: &ClassContext,
         subroutine: &HashMap<&str, SymbolEntry>,
     ) -> Result<Vec<String>, CompileError<'a>> {
-        self.call.compile(class, subroutine)
+        let mut code = self.call.compile(class, subroutine)?;
+        code.push("pop temp 0".to_string());
+
+        Ok(code)
     }
 }
 

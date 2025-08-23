@@ -190,7 +190,7 @@ impl<'a> SubroutineDeclaration<'a> {
         let params = self
             .parameters
             .iter()
-            .map(|param| (param.name, param.parameter_type, SymbolCategory::Arg))
+            .map(|param| (param.name, param.parameter_type, SymbolCategory::Argument))
             .enumerate();
         let vars = self
             .body

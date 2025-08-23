@@ -134,6 +134,16 @@ impl<'a> Term<'a> {
 
                 Ok(code)
             }
+            Self::True => Ok(vec!["push constant 1".to_string(), "neg".to_string()]),
+            Self::False => Ok(vec!["push constant 0".to_string()]),
+            Self::Null => Ok(vec!["push constant 0".to_string()]),
+            Self::This => Ok(vec!["push pointer 0".to_string()]),
+            Self::Variable(var) => Ok(vec![subroutine
+                .get(var)
+                .or_else(|| class.symbols.get(var))
+                .ok_or(CompileError::UnknownSymbol(var))?
+                .compile_push()]),
+            Self::SubroutineCall(call) => call.compile(class, subroutine),
             _ => todo!("{self:?}"),
         }
     }
@@ -278,10 +288,17 @@ impl Op {
 
     pub(crate) fn compile(&self) -> String {
         match self {
-            Self::Plus => "add".to_string(),
-            Self::Multiply => "call Math.multiply 2".to_string(),
-            _ => todo!(),
+            Self::Plus => "add",
+            Self::Minus => "sub",
+            Self::Multiply => "call Math.multiply 2",
+            Self::Divide => "call Math.divide 2",
+            Self::BitAnd => "and",
+            Self::BitOr => "or",
+            Self::Lt => "lt",
+            Self::Gt => "gt",
+            Self::Equals => "eq",
         }
+        .to_string()
     }
 }
 
