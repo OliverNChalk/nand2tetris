@@ -113,6 +113,13 @@ impl<'a> SubroutineBody<'a> {
 
         Ok(SubroutineBody { variables, statements })
     }
+
+    pub(crate) fn compile(&self) -> Vec<String> {
+        self.statements
+            .iter()
+            .flat_map(|statement| statement.compile())
+            .collect()
+    }
 }
 
 #[derive(Debug)]

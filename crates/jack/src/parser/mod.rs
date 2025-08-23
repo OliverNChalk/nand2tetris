@@ -1,8 +1,8 @@
 #![allow(dead_code)]
-mod expression;
-mod statement;
-mod structure;
-mod utils;
+pub(crate) mod expression;
+pub(crate) mod statement;
+pub(crate) mod structure;
+pub(crate) mod utils;
 
 use thiserror::Error;
 

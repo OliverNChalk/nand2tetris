@@ -24,6 +24,13 @@ impl<'a> Statement<'a> {
             _ => Err(ParserError::UnexpectedToken(st)),
         }
     }
+
+    pub(crate) fn compile(&self) -> Vec<String> {
+        match self {
+            Self::Do(stmt) => stmt.compile(),
+            _ => todo!(),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -135,6 +142,10 @@ impl<'a> DoStatement<'a> {
         eat!(tokenizer, Token::Symbol(Symbol::Semicolon))?;
 
         Ok(DoStatement { call })
+    }
+
+    pub(crate) fn compile(&self) -> Vec<String> {
+        self.call.compile()
     }
 }
 

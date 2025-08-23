@@ -161,6 +161,29 @@ impl<'a> SubroutineCall<'a> {
 
         Ok(SubroutineCall { var, subroutine, arguments })
     }
+
+    pub(crate) fn compile(&self) -> Vec<String> {
+        // TODO:
+        //
+        // - Store the containing class name during parsing.
+        //   - Method calls must set `this` to the object being operated on.
+        //   - Constructor/function calls are always preceded by their ClassName.
+        //   - Constructor calls must malloc the current object and store it as `this`.
+        //   - Method calls can be identified via `var.method()` or `method()` where
+        //     method is a valid symbol in the current class's symbol table.
+        //
+        // Strategy:
+        //
+        // - If `var.method()` or `method()` compile a call that sets `this` as argument
+        //   0 followed by any other arguments.
+        // - If `Class.method()` this could either be a function or constructor so just
+        //   compile a regular function call without setting `argument 0` to `this`.
+
+        match self.var {
+            Some(var) => todo!(),
+            None => todo!(),
+        }
+    }
 }
 
 #[derive(Debug)]

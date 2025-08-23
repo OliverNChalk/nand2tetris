@@ -24,4 +24,5 @@ pub(crate) struct Args {
 pub(crate) enum Action {
     Tokenize,
     Parse,
+    Compile,
 }

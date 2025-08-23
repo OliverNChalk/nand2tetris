@@ -1,17 +1,25 @@
-use std::process::ExitCode;
-
 mod args;
+mod code_gen;
 mod parser;
 mod tokenizer;
 
-fn main() -> ExitCode {
+fn main() -> std::process::ExitCode {
     use std::io::{BufWriter, Write};
+    use std::process::ExitCode;
 
     use clap::Parser as _;
 
     use crate::args::Action;
-    use crate::parser::Parser;
+    use crate::parser::{Parser, ParserError};
     use crate::tokenizer::Tokenizer;
+
+    fn print_error(tokenizer: Tokenizer, err: ParserError) {
+        eprintln!("Failed to parse provided source file, the next two unparsed lines are:");
+        for line in tokenizer.remaining().lines().take(3) {
+            eprintln!("==> {line}");
+        }
+        eprintln!("\nError: {err}");
+    }
 
     // Parse command line args.
     let args = args::Args::parse();
@@ -37,15 +45,23 @@ fn main() -> ExitCode {
         Action::Parse => match Parser::parse(&mut tokenizer) {
             Ok(class) => println!("{class:#?}"),
             Err(err) => {
-                eprintln!("Failed to parse provided source file, the next two unparsed lines are:");
-                for line in tokenizer.remaining().lines().take(3) {
-                    eprintln!("==> {line}");
-                }
-                eprintln!("\nError: {err}");
+                print_error(tokenizer, err);
 
                 return ExitCode::FAILURE;
             }
         },
+        Action::Compile => {
+            let class = match Parser::parse(&mut tokenizer) {
+                Ok(class) => class,
+                Err(err) => {
+                    print_error(tokenizer, err);
+
+                    return ExitCode::FAILURE;
+                }
+            };
+
+            code_gen::compile(&class);
+        }
     }
 
     ExitCode::SUCCESS
