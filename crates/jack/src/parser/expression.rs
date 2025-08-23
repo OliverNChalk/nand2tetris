@@ -1,5 +1,8 @@
-use crate::parser::utils::{check_next, eat, peek};
+use hashbrown::HashMap;
+
+use crate::code_gen::{ClassContext, SymbolEntry};
 use crate::parser::error::ParserError;
+use crate::parser::utils::{check_next, eat, peek};
 use crate::tokenizer::{Keyword, Symbol, Token, Tokenizer};
 
 #[derive(Debug)]
@@ -162,7 +165,11 @@ impl<'a> SubroutineCall<'a> {
         Ok(SubroutineCall { var, subroutine, arguments })
     }
 
-    pub(crate) fn compile(&self) -> Vec<String> {
+    pub(crate) fn compile(
+        &self,
+        class: &ClassContext,
+        subroutine: &HashMap<&str, SymbolEntry>,
+    ) -> Vec<String> {
         // TODO:
         //
         // - Store the containing class name during parsing.

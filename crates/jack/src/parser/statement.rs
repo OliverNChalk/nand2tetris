@@ -30,11 +30,11 @@ impl<'a> Statement<'a> {
 
     pub(crate) fn compile(
         &self,
-        context: &ClassContext,
-        subroutine_symbols: &HashMap<&str, SymbolEntry>,
+        class: &ClassContext,
+        subroutine: &HashMap<&str, SymbolEntry>,
     ) -> Vec<String> {
         match self {
-            Self::Do(stmt) => stmt.compile(),
+            Self::Do(stmt) => stmt.compile(class, subroutine),
             _ => todo!(),
         }
     }
@@ -151,8 +151,12 @@ impl<'a> DoStatement<'a> {
         Ok(DoStatement { call })
     }
 
-    pub(crate) fn compile(&self) -> Vec<String> {
-        self.call.compile()
+    pub(crate) fn compile(
+        &self,
+        class: &ClassContext,
+        subroutine: &HashMap<&str, SymbolEntry>,
+    ) -> Vec<String> {
+        self.call.compile(class, subroutine)
     }
 }
 

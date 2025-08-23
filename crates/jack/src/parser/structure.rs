@@ -294,12 +294,12 @@ impl<'a> SubroutineBody<'a> {
 
     pub(crate) fn compile(
         &self,
-        context: &ClassContext,
-        subroutine_symbols: &HashMap<&str, SymbolEntry>,
+        class: &ClassContext,
+        subroutine: &HashMap<&str, SymbolEntry>,
     ) -> Vec<String> {
         self.statements
             .iter()
-            .flat_map(|statement| statement.compile(context, subroutine_symbols))
+            .flat_map(|statement| statement.compile(class, subroutine))
             .collect()
     }
 }
