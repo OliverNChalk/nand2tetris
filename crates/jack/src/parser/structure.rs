@@ -188,20 +188,23 @@ impl<'a> SubroutineDeclaration<'a> {
         let params = self
             .parameters
             .iter()
-            .map(|param| (param.name, SymbolCategory::Arg))
+            .map(|param| (param.name, param.parameter_type, SymbolCategory::Arg))
             .enumerate();
         let vars = self
             .body
             .variables
             .iter()
-            .map(|var| (var.name, SymbolCategory::Local))
+            .map(|var| (var.name, var.var_type, SymbolCategory::Local))
             .enumerate();
-        for (i, (name, category)) in params.chain(vars) {
+        for (i, (name, symbol_type, category)) in params.chain(vars) {
             match subroutine_symbols.entry(name) {
                 Entry::Occupied(_) => return Err(CompileError::DuplicateSymbol(name)),
-                Entry::Vacant(entry) => {
-                    entry.insert(SymbolEntry { name, category, index: u16::try_from(i).unwrap() })
-                }
+                Entry::Vacant(entry) => entry.insert(SymbolEntry {
+                    name,
+                    symbol_type,
+                    category,
+                    index: u16::try_from(i).unwrap(),
+                }),
             };
         }
 
@@ -212,7 +215,7 @@ impl<'a> SubroutineDeclaration<'a> {
         code.push("pop pointer 0".to_string());
 
         // Function body.
-        code.extend(self.body.compile(context, &subroutine_symbols));
+        code.extend(self.body.compile(context, &subroutine_symbols)?);
 
         Ok(code)
     }
@@ -296,11 +299,15 @@ impl<'a> SubroutineBody<'a> {
         &self,
         class: &ClassContext,
         subroutine: &HashMap<&str, SymbolEntry>,
-    ) -> Vec<String> {
-        self.statements
+    ) -> Result<Vec<String>, CompileError<'a>> {
+        Ok(self
+            .statements
             .iter()
-            .flat_map(|statement| statement.compile(class, subroutine))
-            .collect()
+            .map(|statement| statement.compile(class, subroutine))
+            .collect::<Result<Vec<_>, CompileError>>()?
+            .into_iter()
+            .flatten()
+            .collect())
     }
 }
 

@@ -1,7 +1,8 @@
 use hashbrown::HashMap;
 
-use crate::code_gen::{ClassContext, SymbolEntry};
+use crate::code_gen::{ClassContext, CompileError, SymbolCategory, SymbolEntry};
 use crate::parser::error::ParserError;
+use crate::parser::structure::Type;
 use crate::parser::utils::{check_next, eat, peek};
 use crate::tokenizer::{Keyword, Symbol, Token, Tokenizer};
 
@@ -169,7 +170,7 @@ impl<'a> SubroutineCall<'a> {
         &self,
         class: &ClassContext,
         subroutine: &HashMap<&str, SymbolEntry>,
-    ) -> Vec<String> {
+    ) -> Result<Vec<String>, CompileError<'a>> {
         // TODO:
         //
         // - Store the containing class name during parsing.
@@ -186,10 +187,36 @@ impl<'a> SubroutineCall<'a> {
         // - If `Class.method()` this could either be a function or constructor so just
         //   compile a regular function call without setting `argument 0` to `this`.
 
-        match self.var {
-            Some(var) => todo!(),
-            None => todo!(),
-        }
+        // Push the object being operated on if necessary.
+        let (class, push_this) = match self.var {
+            Some(var) => {
+                let push_this = subroutine.get(var).or_else(|| {
+                    class
+                        .symbols
+                        .get(var)
+                        .filter(|symbol| symbol.category == SymbolCategory::Field)
+                });
+
+                match push_this {
+                    Some(symbol) => {
+                        let class_name = match symbol.symbol_type {
+                            Type::Class(name) => name,
+                            _ => return Err(CompileError::InvalidCallee(var)),
+                        };
+
+                        (class_name, Some(symbol.compile_push()))
+                    }
+                    None => (var, None),
+                }
+            }
+            None => (class.name, Some("push pointer 0".to_string())),
+        };
+
+        // Append the function call.
+        let mut code = Vec::from_iter(push_this);
+        code.push(format!("call {class}.{}", self.subroutine));
+
+        Ok(code)
     }
 }
 

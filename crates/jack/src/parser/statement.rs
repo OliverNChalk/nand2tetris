@@ -1,6 +1,6 @@
 use hashbrown::HashMap;
 
-use crate::code_gen::{ClassContext, SymbolEntry};
+use crate::code_gen::{ClassContext, CompileError, SymbolEntry};
 use crate::parser::error::ParserError;
 use crate::parser::expression::{Expression, SubroutineCall};
 use crate::parser::utils::{check_next, eat};
@@ -32,9 +32,10 @@ impl<'a> Statement<'a> {
         &self,
         class: &ClassContext,
         subroutine: &HashMap<&str, SymbolEntry>,
-    ) -> Vec<String> {
+    ) -> Result<Vec<String>, CompileError<'a>> {
         match self {
             Self::Do(stmt) => stmt.compile(class, subroutine),
+            Self::Return(stmt) => stmt.compile(class, subroutine),
             _ => todo!(),
         }
     }
@@ -155,7 +156,7 @@ impl<'a> DoStatement<'a> {
         &self,
         class: &ClassContext,
         subroutine: &HashMap<&str, SymbolEntry>,
-    ) -> Vec<String> {
+    ) -> Result<Vec<String>, CompileError<'a>> {
         self.call.compile(class, subroutine)
     }
 }
@@ -175,5 +176,13 @@ impl<'a> ReturnStatement<'a> {
         eat!(tokenizer, Token::Symbol(Symbol::Semicolon))?;
 
         Ok(ReturnStatement { return_value })
+    }
+
+    pub(crate) fn compile(
+        &self,
+        class: &ClassContext,
+        subroutine: &HashMap<&str, SymbolEntry>,
+    ) -> Result<Vec<String>, CompileError<'a>> {
+        todo!()
     }
 }

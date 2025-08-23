@@ -1,7 +1,7 @@
 use hashbrown::hash_map::Entry;
 use hashbrown::HashMap;
 
-use crate::parser::structure::{Class, FieldModifier};
+use crate::parser::structure::{Class, FieldModifier, Type};
 
 pub(crate) fn compile<'a>(class: &Class<'a>) -> Result<Vec<String>, CompileError<'a>> {
     let mut code = Vec::default();
@@ -18,7 +18,12 @@ pub(crate) fn compile<'a>(class: &Class<'a>) -> Result<Vec<String>, CompileError
                     FieldModifier::Static => (SymbolCategory::Static, indexes.next_static()),
                 };
 
-                entry.insert(SymbolEntry { name: variable.name, category, index })
+                entry.insert(SymbolEntry {
+                    name: variable.name,
+                    symbol_type: variable.var_type,
+                    category,
+                    index,
+                })
             }
         };
     }
@@ -34,6 +39,7 @@ pub(crate) fn compile<'a>(class: &Class<'a>) -> Result<Vec<String>, CompileError
 
 pub(crate) enum CompileError<'a> {
     DuplicateSymbol(&'a str),
+    InvalidCallee(&'a str),
 }
 
 #[derive(Debug, Default)]
@@ -65,10 +71,23 @@ pub(crate) struct ClassContext<'a> {
 
 pub(crate) struct SymbolEntry<'a> {
     pub(crate) name: &'a str,
+    pub(crate) symbol_type: Type<'a>,
     pub(crate) category: SymbolCategory,
     pub(crate) index: u16,
 }
 
+impl<'a> SymbolEntry<'a> {
+    pub(crate) fn compile_push(&self) -> String {
+        format!("push {} {}", self.category, self.index)
+    }
+
+    pub(crate) fn compile_pop(&self) -> String {
+        format!("pop {} {}", self.category, self.index)
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, strum::Display)]
+#[strum(serialize_all = "lowercase")]
 pub(crate) enum SymbolCategory {
     Field,
     Static,
