@@ -128,6 +128,12 @@ impl<'a> Term<'a> {
         match self {
             Self::IntegerConstant(integer) => Ok(vec![format!("push constant {integer}")]),
             Self::Expression(expression) => expression.compile(class, subroutine),
+            Self::UnaryOp { op, term } => {
+                let mut code = term.compile(class, subroutine)?;
+                code.push(op.compile());
+
+                Ok(code)
+            }
             _ => todo!("{self:?}"),
         }
     }
@@ -283,4 +289,13 @@ impl Op {
 pub(crate) enum UnaryOp {
     Negate,
     Not,
+}
+
+impl UnaryOp {
+    fn compile(&self) -> String {
+        match self {
+            Self::Negate => "neg".to_string(),
+            Self::Not => "not".to_string(),
+        }
+    }
 }

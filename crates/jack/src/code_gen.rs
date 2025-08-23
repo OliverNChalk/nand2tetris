@@ -44,6 +44,8 @@ pub(crate) enum CompileError<'a> {
     DuplicateSymbol(&'a str),
     #[error("Invalid callee; callee={0}")]
     InvalidCallee(&'a str),
+    #[error("Unknown symbol; symbol={0}")]
+    UnknownSymbol(&'a str),
 }
 
 #[derive(Debug, Default)]

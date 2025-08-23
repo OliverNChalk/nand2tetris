@@ -34,9 +34,10 @@ impl<'a> Statement<'a> {
         subroutine: &HashMap<&str, SymbolEntry>,
     ) -> Result<Vec<String>, CompileError<'a>> {
         match self {
+            Self::Let(stmt) => stmt.compile(class, subroutine),
             Self::Do(stmt) => stmt.compile(class, subroutine),
             Self::Return(stmt) => stmt.compile(class, subroutine),
-            _ => todo!(),
+            stmt => todo!("{stmt:?}"),
         }
     }
 }
@@ -71,6 +72,22 @@ impl<'a> LetStatement<'a> {
         eat!(tokenizer, Token::Symbol(Symbol::Semicolon))?;
 
         Ok(LetStatement { var_name, index, expression })
+    }
+
+    pub(crate) fn compile(
+        &self,
+        class: &ClassContext,
+        subroutine: &HashMap<&str, SymbolEntry>,
+    ) -> Result<Vec<String>, CompileError<'a>> {
+        assert!(self.index.is_none());
+        let mut code = self.expression.compile(class, subroutine)?;
+        let symbol = subroutine
+            .get(self.var_name)
+            .or_else(|| class.symbols.get(self.var_name))
+            .ok_or(CompileError::UnknownSymbol(self.var_name))?;
+        code.push(symbol.compile_pop());
+
+        Ok(code)
     }
 }
 

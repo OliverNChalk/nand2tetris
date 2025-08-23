@@ -127,6 +127,9 @@ impl<'a> SubroutineDeclaration<'a> {
         let SourceToken { source, token } = tokenizer.next().ok_or(ParseError::UnexpectedEof)??;
         let return_type = match token {
             Token::Keyword(Keyword::Void) => ReturnType::Void,
+            Token::Keyword(Keyword::Int) => ReturnType::Int,
+            Token::Keyword(Keyword::Char) => ReturnType::Char,
+            Token::Keyword(Keyword::Boolean) => ReturnType::Boolean,
             Token::Identifier => ReturnType::Class(source),
             _ => return Err(ParseError::UnexpectedToken(SourceToken { source, token })),
         };
@@ -232,6 +235,9 @@ pub(crate) enum SubroutineType {
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum ReturnType<'a> {
     Void,
+    Int,
+    Char,
+    Boolean,
     Class(&'a str),
 }
 
