@@ -11,7 +11,6 @@ fn main() -> std::process::ExitCode {
     use clap::Parser as _;
 
     use crate::args::Action;
-    use crate::parser::error::ParseError;
     use crate::parser::structure::Class;
     use crate::tokenizer::Tokenizer;
 

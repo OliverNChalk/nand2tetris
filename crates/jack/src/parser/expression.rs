@@ -9,7 +9,7 @@ use crate::tokenizer::{Keyword, Symbol, Token, Tokenizer};
 #[derive(Debug)]
 pub(crate) struct Expression<'a> {
     term: Box<Term<'a>>,
-    op: Option<Box<(Op, Term<'a>)>>,
+    op: Option<(Op, Box<Term<'a>>)>,
 }
 
 impl<'a> Expression<'a> {
@@ -28,7 +28,7 @@ impl<'a> Expression<'a> {
                 | Symbol::LeftAngleBracket
                 | Symbol::RightAngleBracket
                 | Symbol::Equals,
-            )) => Some(Box::new((Op::parse(tokenizer)?, Term::parse(tokenizer)?))),
+            )) => Some((Op::parse(tokenizer)?, Box::new(Term::parse(tokenizer)?))),
             _ => None,
         };
 
@@ -40,7 +40,13 @@ impl<'a> Expression<'a> {
         class: &ClassContext,
         subroutine: &HashMap<&str, SymbolEntry>,
     ) -> Result<Vec<String>, CompileError<'a>> {
-        todo!()
+        let mut code = self.term.compile(class, subroutine)?;
+        if let Some((op, term)) = &self.op {
+            code.extend(term.compile(class, subroutine)?);
+            code.push(op.compile());
+        }
+
+        Ok(code)
     }
 }
 
@@ -113,6 +119,18 @@ impl<'a> Term<'a> {
             _ => return Err(ParseError::UnexpectedToken(tokenizer.next().unwrap().unwrap())),
         })
     }
+
+    pub(crate) fn compile(
+        &self,
+        class: &ClassContext,
+        subroutine: &HashMap<&str, SymbolEntry>,
+    ) -> Result<Vec<String>, CompileError<'a>> {
+        match self {
+            Self::IntegerConstant(integer) => Ok(vec![format!("push constant {integer}")]),
+            Self::Expression(expression) => expression.compile(class, subroutine),
+            _ => todo!("{self:?}"),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -179,24 +197,8 @@ impl<'a> SubroutineCall<'a> {
         class: &ClassContext,
         subroutine: &HashMap<&str, SymbolEntry>,
     ) -> Result<Vec<String>, CompileError<'a>> {
-        // TODO:
-        //
-        // - Store the containing class name during parsing.
-        //   - Method calls must set `this` to the object being operated on.
-        //   - Constructor/function calls are always preceded by their ClassName.
-        //   - Constructor calls must malloc the current object and store it as `this`.
-        //   - Method calls can be identified via `var.method()` or `method()` where
-        //     method is a valid symbol in the current class's symbol table.
-        //
-        // Strategy:
-        //
-        // - If `var.method()` or `method()` compile a call that sets `this` as argument
-        //   0 followed by any other arguments.
-        // - If `Class.method()` this could either be a function or constructor so just
-        //   compile a regular function call without setting `argument 0` to `this`.
-
         // Push the object being operated on if necessary.
-        let (class, push_this) = match self.var {
+        let (class_name, push_this) = match self.var {
             Some(var) => {
                 let push_this = subroutine.get(var).or_else(|| {
                     class
@@ -220,9 +222,19 @@ impl<'a> SubroutineCall<'a> {
             None => (class.name, Some("push pointer 0".to_string())),
         };
 
-        // Append the function call.
+        // Push all the arguments.
+        let method = push_this.is_some();
         let mut code = Vec::from_iter(push_this);
-        code.push(format!("call {class}.{}", self.subroutine));
+        for arg in &self.arguments {
+            code.extend(arg.compile(class, subroutine)?);
+        }
+
+        // Append the function call.
+        code.push(format!(
+            "call {class_name}.{} {}",
+            self.subroutine,
+            self.arguments.len() + usize::from(method)
+        ));
 
         Ok(code)
     }
@@ -255,6 +267,14 @@ impl Op {
             Token::Symbol(Symbol::RightAngleBracket) => Ok(Self::Gt),
             Token::Symbol(Symbol::Equals) => Ok(Self::Equals),
             _ => Err(ParseError::UnexpectedToken(st)),
+        }
+    }
+
+    pub(crate) fn compile(&self) -> String {
+        match self {
+            Self::Plus => "add".to_string(),
+            Self::Multiply => "call Math.multiply 2".to_string(),
+            _ => todo!(),
         }
     }
 }

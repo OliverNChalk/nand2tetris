@@ -210,8 +210,10 @@ impl<'a> SubroutineDeclaration<'a> {
         // Function boilerplate.
         let mut code = Vec::default();
         code.push(format!("function {}.{} {}", context.name, self.name, self.body.variables.len()));
-        code.push("push argument 0".to_string());
-        code.push("pop pointer 0".to_string());
+        if self.subroutine_type == SubroutineType::Method {
+            code.push("push argument 0".to_string());
+            code.push("pop pointer 0".to_string());
+        }
 
         // Function body.
         code.extend(self.body.compile(context, &subroutine_symbols)?);
@@ -220,7 +222,7 @@ impl<'a> SubroutineDeclaration<'a> {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum SubroutineType {
     Constructor,
     Function,
