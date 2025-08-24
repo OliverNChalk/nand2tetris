@@ -254,7 +254,7 @@ impl<'a> SubroutineCall<'a> {
                     class
                         .symbols
                         .get(var)
-                        .filter(|symbol| symbol.category == SymbolLocation::This)
+                        .filter(|symbol| symbol.location == SymbolLocation::This)
                 });
 
                 match push_this {

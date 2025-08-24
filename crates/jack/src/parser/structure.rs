@@ -198,13 +198,16 @@ impl<'a> SubroutineDeclaration<'a> {
             .iter()
             .map(|var| (var.name, var.var_type, SymbolLocation::Local))
             .enumerate();
-        for (i, (name, symbol_type, category)) in params.chain(vars) {
+        for (i, (name, symbol_type, location)) in params.chain(vars) {
+            let has_this = self.subroutine_type == SubroutineType::Method
+                && location == SymbolLocation::Argument;
+
             match subroutine_symbols.entry(name) {
                 Entry::Occupied(_) => return Err(CompileError::DuplicateSymbol(name)),
                 Entry::Vacant(entry) => entry.insert(SymbolEntry {
                     symbol_type,
-                    category,
-                    index: u16::try_from(i).unwrap(),
+                    location,
+                    index: u16::from(has_this) + u16::try_from(i).unwrap(),
                 }),
             };
         }

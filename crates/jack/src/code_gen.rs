@@ -24,7 +24,11 @@ pub(crate) fn compile<'a>(
                     FieldModifier::Static => (SymbolLocation::Static, indexes.next_static()),
                 };
 
-                entry.insert(SymbolEntry { symbol_type: variable.var_type, category, index })
+                entry.insert(SymbolEntry {
+                    symbol_type: variable.var_type,
+                    location: category,
+                    index,
+                })
             }
         };
     }
@@ -84,17 +88,17 @@ impl<'a> ClassContext<'a> {
 
 pub(crate) struct SymbolEntry<'a> {
     pub(crate) symbol_type: Type<'a>,
-    pub(crate) category: SymbolLocation,
+    pub(crate) location: SymbolLocation,
     pub(crate) index: u16,
 }
 
 impl<'a> SymbolEntry<'a> {
     pub(crate) fn compile_push(&self) -> String {
-        format!("push {} {}", self.category, self.index)
+        format!("push {} {}", self.location, self.index)
     }
 
     pub(crate) fn compile_pop(&self) -> String {
-        format!("pop {} {}", self.category, self.index)
+        format!("pop {} {}", self.location, self.index)
     }
 }
 
