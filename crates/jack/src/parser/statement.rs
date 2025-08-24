@@ -80,13 +80,34 @@ impl<'a> LetStatement<'a> {
         class: &ClassContext,
         subroutine: &HashMap<&str, SymbolEntry>,
     ) -> Result<Vec<String>, CompileError<'a>> {
-        assert!(self.index.is_none());
+        // Compute the right hand side of the assignment.
+        //
+        // [RHS]
         let mut code = self.expression.compile(class, subroutine)?;
+
+        // Compute the region in memory to store the expression result.
         let symbol = subroutine
             .get(self.var_name)
             .or_else(|| class.symbols.get(self.var_name))
             .ok_or(CompileError::UnknownSymbol(self.var_name))?;
-        code.push(symbol.compile_pop());
+        match &self.index {
+            Some(expression) => {
+                // [RHS, symbol]
+                code.push(symbol.compile_push());
+                // [RHS, symbol, expression]
+                code.extend(expression.compile(class, subroutine)?);
+                // [RHS, symbol[expression]]
+                code.push("add".to_string());
+                // At this stage we have that configured accurately.
+                //
+                // [RHS]
+                code.push("pop pointer 1".to_string());
+                // []
+                code.push("pop that 0".to_string());
+            }
+            // []
+            None => code.push(symbol.compile_pop()),
+        }
 
         Ok(code)
     }

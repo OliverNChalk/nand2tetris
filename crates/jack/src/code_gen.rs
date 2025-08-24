@@ -20,16 +20,11 @@ pub(crate) fn compile<'a>(
             Entry::Occupied(_) => return Err(CompileError::DuplicateSymbol(variable.name)),
             Entry::Vacant(entry) => {
                 let (category, index) = match variable.modifier {
-                    FieldModifier::Field => (SymbolCategory::Field, indexes.next_field()),
-                    FieldModifier::Static => (SymbolCategory::Static, indexes.next_static()),
+                    FieldModifier::Field => (SymbolLocation::This, indexes.next_field()),
+                    FieldModifier::Static => (SymbolLocation::Static, indexes.next_static()),
                 };
 
-                entry.insert(SymbolEntry {
-                    name: variable.name,
-                    symbol_type: variable.var_type,
-                    category,
-                    index,
-                })
+                entry.insert(SymbolEntry { symbol_type: variable.var_type, category, index })
             }
         };
     }
@@ -88,9 +83,8 @@ impl<'a> ClassContext<'a> {
 }
 
 pub(crate) struct SymbolEntry<'a> {
-    pub(crate) name: &'a str,
     pub(crate) symbol_type: Type<'a>,
-    pub(crate) category: SymbolCategory,
+    pub(crate) category: SymbolLocation,
     pub(crate) index: u16,
 }
 
@@ -106,8 +100,8 @@ impl<'a> SymbolEntry<'a> {
 
 #[derive(Debug, PartialEq, Eq, strum::Display)]
 #[strum(serialize_all = "lowercase")]
-pub(crate) enum SymbolCategory {
-    Field,
+pub(crate) enum SymbolLocation {
+    This,
     Static,
     Local,
     Argument,

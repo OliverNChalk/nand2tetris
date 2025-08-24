@@ -1,6 +1,6 @@
 use hashbrown::HashMap;
 
-use crate::code_gen::{ClassContext, CompileError, SymbolCategory, SymbolEntry};
+use crate::code_gen::{ClassContext, CompileError, SymbolEntry, SymbolLocation};
 use crate::parser::error::ParseError;
 use crate::parser::structure::Type;
 use crate::parser::utils::{check_next, eat, peek};
@@ -127,6 +127,23 @@ impl<'a> Term<'a> {
     ) -> Result<Vec<String>, CompileError<'a>> {
         match self {
             Self::IntegerConstant(integer) => Ok(vec![format!("push constant {integer}")]),
+            Self::StringConstant(string) => {
+                let mut code = vec![
+                    format!("push constant {}", string.len()),
+                    "call String.new 1".to_string(),
+                    "pop temp 0".to_string(),
+                ];
+                for char in string.chars() {
+                    code.extend([
+                        "push temp 0".to_string(),
+                        format!("push constant {}", u8::try_from(char).unwrap()),
+                        "call String.appendChar 2".to_string(),
+                    ]);
+                }
+                code.push("push temp 0".to_string());
+
+                Ok(code)
+            }
             Self::Expression(expression) => expression.compile(class, subroutine),
             Self::UnaryOp { op, term } => {
                 let mut code = term.compile(class, subroutine)?;
@@ -143,8 +160,28 @@ impl<'a> Term<'a> {
                 .or_else(|| class.symbols.get(var))
                 .ok_or(CompileError::UnknownSymbol(var))?
                 .compile_push()]),
+            Self::VariableIndex(idx) => {
+                let symbol = subroutine
+                    .get(idx.var)
+                    .or_else(|| class.symbols.get(idx.var))
+                    .ok_or(CompileError::UnknownSymbol(idx.var))?;
+
+                // [symbol]
+                let mut code = vec![symbol.compile_push()];
+                // [symbol, expression]
+                code.extend(idx.index.compile(class, subroutine)?);
+                code.extend([
+                    // [that]
+                    "add".to_string(),
+                    // []
+                    "pop pointer 1".to_string(),
+                    // [that[0]]
+                    "push that 0".to_string(),
+                ]);
+
+                Ok(code)
+            }
             Self::SubroutineCall(call) => call.compile(class, subroutine),
-            _ => todo!("{self:?}"),
         }
     }
 }
@@ -152,18 +189,15 @@ impl<'a> Term<'a> {
 #[derive(Debug)]
 pub(crate) struct VariableIndex<'a> {
     var: &'a str,
-    index: i16,
+    index: Expression<'a>,
 }
 
 impl<'a> VariableIndex<'a> {
     fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParseError<'a>> {
         let var = eat!(tokenizer, Token::Identifier)?;
         eat!(tokenizer, Token::Symbol(Symbol::LeftBracket))?;
-        let index = tokenizer.next().ok_or(ParseError::UnexpectedEof)??;
+        let index = Expression::parse(tokenizer)?;
         eat!(tokenizer, Token::Symbol(Symbol::RightBracket))?;
-        let Token::IntegerConstant(index) = index.token else {
-            return Err(ParseError::UnexpectedToken(index));
-        };
 
         Ok(Self { var, index })
     }
@@ -220,7 +254,7 @@ impl<'a> SubroutineCall<'a> {
                     class
                         .symbols
                         .get(var)
-                        .filter(|symbol| symbol.category == SymbolCategory::Field)
+                        .filter(|symbol| symbol.category == SymbolLocation::This)
                 });
 
                 match push_this {

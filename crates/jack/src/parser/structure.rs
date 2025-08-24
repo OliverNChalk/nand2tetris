@@ -1,7 +1,7 @@
 use hashbrown::hash_map::Entry;
 use hashbrown::HashMap;
 
-use crate::code_gen::{ClassContext, CompileError, SymbolCategory, SymbolEntry};
+use crate::code_gen::{ClassContext, CompileError, SymbolEntry, SymbolLocation};
 use crate::parser::error::ParseError;
 use crate::parser::statement::Statement;
 use crate::parser::utils::{check_next, eat, peek};
@@ -184,25 +184,24 @@ impl<'a> SubroutineDeclaration<'a> {
         Ok(SubroutineDeclaration { subroutine_type, return_type, name, parameters, body })
     }
 
-    pub(crate) fn compile(&self, context: &ClassContext) -> Result<Vec<String>, CompileError<'a>> {
+    pub(crate) fn compile(&self, class: &ClassContext) -> Result<Vec<String>, CompileError<'a>> {
         // Construct the subroutine's nested symbol table.
         let mut subroutine_symbols: HashMap<&'a str, SymbolEntry<'_>> = HashMap::default();
         let params = self
             .parameters
             .iter()
-            .map(|param| (param.name, param.parameter_type, SymbolCategory::Argument))
+            .map(|param| (param.name, param.parameter_type, SymbolLocation::Argument))
             .enumerate();
         let vars = self
             .body
             .variables
             .iter()
-            .map(|var| (var.name, var.var_type, SymbolCategory::Local))
+            .map(|var| (var.name, var.var_type, SymbolLocation::Local))
             .enumerate();
         for (i, (name, symbol_type, category)) in params.chain(vars) {
             match subroutine_symbols.entry(name) {
                 Entry::Occupied(_) => return Err(CompileError::DuplicateSymbol(name)),
                 Entry::Vacant(entry) => entry.insert(SymbolEntry {
-                    name,
                     symbol_type,
                     category,
                     index: u16::try_from(i).unwrap(),
@@ -212,14 +211,22 @@ impl<'a> SubroutineDeclaration<'a> {
 
         // Function boilerplate.
         let mut code = Vec::default();
-        code.push(format!("function {}.{} {}", context.name, self.name, self.body.variables.len()));
-        if self.subroutine_type == SubroutineType::Method {
-            code.push("push argument 0".to_string());
-            code.push("pop pointer 0".to_string());
+        code.push(format!("function {}.{} {}", class.name, self.name, self.body.variables.len()));
+        match self.subroutine_type {
+            SubroutineType::Method => {
+                code.push("push argument 0".to_string());
+                code.push("pop pointer 0".to_string());
+            }
+            SubroutineType::Constructor => {
+                code.push(format!("push constant {}", class.symbols.len()));
+                code.push("call Memory.alloc 1".to_string());
+                code.push("pop pointer 0".to_string());
+            }
+            SubroutineType::Function => {}
         }
 
         // Function body.
-        code.extend(self.body.compile(context, &subroutine_symbols)?);
+        code.extend(self.body.compile(class, &subroutine_symbols)?);
 
         Ok(code)
     }
