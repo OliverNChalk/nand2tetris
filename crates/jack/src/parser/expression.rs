@@ -1,15 +1,19 @@
+use hashbrown::HashMap;
+
+use crate::code_gen::{ClassContext, CompileError, SymbolEntry, SymbolLocation};
+use crate::parser::error::ParseError;
+use crate::parser::structure::Type;
 use crate::parser::utils::{check_next, eat, peek};
-use crate::parser::ParserError;
 use crate::tokenizer::{Keyword, Symbol, Token, Tokenizer};
 
 #[derive(Debug)]
 pub(crate) struct Expression<'a> {
     term: Box<Term<'a>>,
-    op: Option<Box<(Op, Term<'a>)>>,
+    op: Option<(Op, Box<Term<'a>>)>,
 }
 
 impl<'a> Expression<'a> {
-    pub(crate) fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParserError<'a>> {
+    pub(crate) fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParseError<'a>> {
         let term = Box::new(Term::parse(tokenizer)?);
 
         // Eat the op if one exists.
@@ -24,11 +28,25 @@ impl<'a> Expression<'a> {
                 | Symbol::LeftAngleBracket
                 | Symbol::RightAngleBracket
                 | Symbol::Equals,
-            )) => Some(Box::new((Op::parse(tokenizer)?, Term::parse(tokenizer)?))),
+            )) => Some((Op::parse(tokenizer)?, Box::new(Term::parse(tokenizer)?))),
             _ => None,
         };
 
         Ok(Expression { term, op })
+    }
+
+    pub(crate) fn compile(
+        &self,
+        class: &ClassContext,
+        subroutine: &HashMap<&str, SymbolEntry>,
+    ) -> Result<Vec<String>, CompileError<'a>> {
+        let mut code = self.term.compile(class, subroutine)?;
+        if let Some((op, term)) = &self.op {
+            code.extend(term.compile(class, subroutine)?);
+            code.push(op.compile());
+        }
+
+        Ok(code)
     }
 }
 
@@ -48,8 +66,8 @@ pub(crate) enum Term<'a> {
 }
 
 impl<'a> Term<'a> {
-    fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParserError<'a>> {
-        let st = tokenizer.peek_0().ok_or(ParserError::UnexpectedEof)??;
+    fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParseError<'a>> {
+        let st = tokenizer.peek_0().ok_or(ParseError::UnexpectedEof)??;
         let mut simple_term = |term: Term<'a>| -> Term<'a> {
             tokenizer.next().unwrap().unwrap();
 
@@ -83,7 +101,7 @@ impl<'a> Term<'a> {
                 Term::Expression(expression)
             }
             Token::Identifier => {
-                let next = tokenizer.peek_1().ok_or(ParserError::UnexpectedEof)??.token;
+                let next = tokenizer.peek_1().ok_or(ParseError::UnexpectedEof)??.token;
                 match next {
                     Token::Symbol(Symbol::LeftBracket) => {
                         Term::VariableIndex(VariableIndex::parse(tokenizer)?)
@@ -98,26 +116,88 @@ impl<'a> Term<'a> {
                     }
                 }
             }
-            _ => return Err(ParserError::UnexpectedToken(tokenizer.next().unwrap().unwrap())),
+            _ => return Err(ParseError::UnexpectedToken(tokenizer.next().unwrap().unwrap())),
         })
+    }
+
+    pub(crate) fn compile(
+        &self,
+        class: &ClassContext,
+        subroutine: &HashMap<&str, SymbolEntry>,
+    ) -> Result<Vec<String>, CompileError<'a>> {
+        match self {
+            Self::IntegerConstant(integer) => Ok(vec![format!("push constant {integer}")]),
+            Self::StringConstant(string) => {
+                let mut code = vec![
+                    format!("push constant {}", string.len()),
+                    "call String.new 1".to_string(),
+                    "pop temp 0".to_string(),
+                ];
+                for char in string.chars() {
+                    code.extend([
+                        "push temp 0".to_string(),
+                        format!("push constant {}", u8::try_from(char).unwrap()),
+                        "call String.appendChar 2".to_string(),
+                    ]);
+                }
+                code.push("push temp 0".to_string());
+
+                Ok(code)
+            }
+            Self::Expression(expression) => expression.compile(class, subroutine),
+            Self::UnaryOp { op, term } => {
+                let mut code = term.compile(class, subroutine)?;
+                code.push(op.compile());
+
+                Ok(code)
+            }
+            Self::True => Ok(vec!["push constant 1".to_string(), "neg".to_string()]),
+            Self::False => Ok(vec!["push constant 0".to_string()]),
+            Self::Null => Ok(vec!["push constant 0".to_string()]),
+            Self::This => Ok(vec!["push pointer 0".to_string()]),
+            Self::Variable(var) => Ok(vec![subroutine
+                .get(var)
+                .or_else(|| class.symbols.get(var))
+                .ok_or(CompileError::UnknownSymbol(var))?
+                .compile_push()]),
+            Self::VariableIndex(idx) => {
+                let symbol = subroutine
+                    .get(idx.var)
+                    .or_else(|| class.symbols.get(idx.var))
+                    .ok_or(CompileError::UnknownSymbol(idx.var))?;
+
+                // [symbol]
+                let mut code = vec![symbol.compile_push()];
+                // [symbol, expression]
+                code.extend(idx.index.compile(class, subroutine)?);
+                code.extend([
+                    // [that]
+                    "add".to_string(),
+                    // []
+                    "pop pointer 1".to_string(),
+                    // [that[0]]
+                    "push that 0".to_string(),
+                ]);
+
+                Ok(code)
+            }
+            Self::SubroutineCall(call) => call.compile(class, subroutine),
+        }
     }
 }
 
 #[derive(Debug)]
 pub(crate) struct VariableIndex<'a> {
     var: &'a str,
-    index: i16,
+    index: Expression<'a>,
 }
 
 impl<'a> VariableIndex<'a> {
-    fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParserError<'a>> {
+    fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParseError<'a>> {
         let var = eat!(tokenizer, Token::Identifier)?;
         eat!(tokenizer, Token::Symbol(Symbol::LeftBracket))?;
-        let index = tokenizer.next().ok_or(ParserError::UnexpectedEof)??;
+        let index = Expression::parse(tokenizer)?;
         eat!(tokenizer, Token::Symbol(Symbol::RightBracket))?;
-        let Token::IntegerConstant(index) = index.token else {
-            return Err(ParserError::UnexpectedToken(index));
-        };
 
         Ok(Self { var, index })
     }
@@ -131,7 +211,7 @@ pub(crate) struct SubroutineCall<'a> {
 }
 
 impl<'a> SubroutineCall<'a> {
-    pub(crate) fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParserError<'a>> {
+    pub(crate) fn parse(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParseError<'a>> {
         // No matter what, a subroutine call begins with an identifier (class, variable,
         // or subroutine).
         let first_identifier = eat!(tokenizer, Token::Identifier)?;
@@ -161,6 +241,53 @@ impl<'a> SubroutineCall<'a> {
 
         Ok(SubroutineCall { var, subroutine, arguments })
     }
+
+    pub(crate) fn compile(
+        &self,
+        class: &ClassContext,
+        subroutine: &HashMap<&str, SymbolEntry>,
+    ) -> Result<Vec<String>, CompileError<'a>> {
+        // Push the object being operated on if necessary.
+        let (class_name, push_this) = match self.var {
+            Some(var) => {
+                let push_this = subroutine.get(var).or_else(|| {
+                    class
+                        .symbols
+                        .get(var)
+                        .filter(|symbol| symbol.location == SymbolLocation::This)
+                });
+
+                match push_this {
+                    Some(symbol) => {
+                        let class_name = match symbol.symbol_type {
+                            Type::Class(name) => name,
+                            _ => return Err(CompileError::InvalidCallee(var)),
+                        };
+
+                        (class_name, Some(symbol.compile_push()))
+                    }
+                    None => (var, None),
+                }
+            }
+            None => (class.name, Some("push pointer 0".to_string())),
+        };
+
+        // Push all the arguments.
+        let method = push_this.is_some();
+        let mut code = Vec::from_iter(push_this);
+        for arg in &self.arguments {
+            code.extend(arg.compile(class, subroutine)?);
+        }
+
+        // Append the function call.
+        code.push(format!(
+            "call {class_name}.{} {}",
+            self.subroutine,
+            self.arguments.len() + usize::from(method)
+        ));
+
+        Ok(code)
+    }
 }
 
 #[derive(Debug)]
@@ -177,8 +304,8 @@ pub(crate) enum Op {
 }
 
 impl Op {
-    pub(crate) fn parse<'a>(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParserError<'a>> {
-        let st = tokenizer.next().ok_or(ParserError::UnexpectedEof)??;
+    pub(crate) fn parse<'a>(tokenizer: &mut Tokenizer<'a>) -> Result<Self, ParseError<'a>> {
+        let st = tokenizer.next().ok_or(ParseError::UnexpectedEof)??;
         match st.token {
             Token::Symbol(Symbol::Plus) => Ok(Self::Plus),
             Token::Symbol(Symbol::Minus) => Ok(Self::Minus),
@@ -189,8 +316,23 @@ impl Op {
             Token::Symbol(Symbol::LeftAngleBracket) => Ok(Self::Lt),
             Token::Symbol(Symbol::RightAngleBracket) => Ok(Self::Gt),
             Token::Symbol(Symbol::Equals) => Ok(Self::Equals),
-            _ => Err(ParserError::UnexpectedToken(st)),
+            _ => Err(ParseError::UnexpectedToken(st)),
         }
+    }
+
+    pub(crate) fn compile(&self) -> String {
+        match self {
+            Self::Plus => "add",
+            Self::Minus => "sub",
+            Self::Multiply => "call Math.multiply 2",
+            Self::Divide => "call Math.divide 2",
+            Self::BitAnd => "and",
+            Self::BitOr => "or",
+            Self::Lt => "lt",
+            Self::Gt => "gt",
+            Self::Equals => "eq",
+        }
+        .to_string()
     }
 }
 
@@ -198,4 +340,13 @@ impl Op {
 pub(crate) enum UnaryOp {
     Negate,
     Not,
+}
+
+impl UnaryOp {
+    fn compile(&self) -> String {
+        match self {
+            Self::Negate => "neg".to_string(),
+            Self::Not => "not".to_string(),
+        }
+    }
 }
