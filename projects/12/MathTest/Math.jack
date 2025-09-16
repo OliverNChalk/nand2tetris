@@ -8,17 +8,17 @@
  * Note: Jack compilers implement multiplication and division using OS method calls.
  */
 class Math {
-    static Array mask;
+    static Array pow2;
 
     /** Initializes the library. */
     function void init() {
         var int i, val;
 
-        let mask = Array.new(16);
+        let pow2 = Array.new(16);
         let i = 0;
         let val = 1;
         while (i < 16) {
-            let mask[i] = val;
+            let pow2[i] = val;
             let val = val + val;
             let i = i + 1;
         }
@@ -75,7 +75,7 @@ class Math {
             return 0;
         }
 
-        let q = Math.divide(x, y + y);
+        let q = x / (y + y);
         if ((x - (2 * q * y)) < y) {
             let result_abs = q + q;
         } else {
@@ -91,16 +91,31 @@ class Math {
 
     /** Returns the integer part of the square root of x. */
     function int sqrt(int x) {
-        return 420;
+        var int i, y, guess, guess_squared;
+
+        let y = 0;
+        let i = 8;
+        while (i > 0) {
+            let i = i - 1;
+            let guess = y + pow2[i];
+            let guess_squared = guess * guess;
+            // NB: guess_squared can overflow which will produce a negative
+            // value which is not a valid root.
+            if ((~(guess_squared > x)) & (guess_squared > 0)) {
+                let y = guess;
+            }
+        }
+
+        return y;
     }
 
     /** Returns the greater number. */
     function int max(int a, int b) {
         if (a > b) {
-            return b;
+            return a;
         }
 
-        return a;
+        return b;
     }
 
     /** Returns the smaller number. */
@@ -113,7 +128,7 @@ class Math {
     }
 
     function int bitN(int a, int i) {
-        let a = -((a & mask[i]) = mask[i]);
+        let a = -((a & pow2[i]) = pow2[i]);
 
         return a;
     }
