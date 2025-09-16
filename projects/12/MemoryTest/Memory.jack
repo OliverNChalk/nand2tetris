@@ -1,0 +1,95 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/12/Memory.jack
+
+/**
+ * This library provides two services: direct access to the computer's main
+ * memory (RAM), and allocation and recycling of memory blocks. The Hack RAM
+ * consists of 32,768 words, each holding a 16-bit binary number.
+ */
+class Memory {
+    static Array mem, heap;
+
+    /** Initializes the class. */
+    function void init() {
+        let mem = 0;
+        let freeStart = 2048;
+        let freeEnd = 2048;
+
+        // Initialize the first memory block.
+        let freeStart[0] = 14334;
+        let freeStart[1] = 0;
+
+        return;
+    }
+
+    /** Returns the RAM value at the given address. */
+    function int peek(int address) {
+        return mem[address];
+    }
+
+    /** Sets the RAM value at the given address to the given value. */
+    function void poke(int address, int value) {
+        let mem[address] = value;
+
+        return;
+    }
+
+    /** Finds an available RAM block of the given size and returns
+     *  a reference to its base address. */
+    function Array alloc(int cap) {
+        var Array block, parent;
+        var int min;
+
+        let block = freeStart;
+        let parent = freeStart;
+        let min = cap + 2;
+
+        // If freeStart is 0, we have no available blocks.
+        if (freeStart = 0) {
+            return -1;
+        }
+
+        // Find the first memory block that can fit the requested size.
+        while (block[0] < min) {
+            if (block[1] = 0) {
+                return -1;
+            }
+
+            // Check the next entry in the free list.
+            let parent = block;
+            let block = block[1];
+        }
+
+        // Shrink the block to the requested size & append the remainder to the
+        // free list.
+        if (block[0] > (min + 2)) {
+            // The current freeEnd will become the parent of the new block.
+            let freeEnd[1] = block + min;
+
+            // Free end must now point at the new end.
+            let freeEnd = block + min;
+
+            // Write the new block's size & next fields.
+            let freeEnd[0] = (block[0] - min) - 2;
+            let freeEnd[1] = 0;
+        }
+
+        // Remove the block from the linked list.
+        parent[1] = block[1];
+
+        // If this was the first block in the list, update freeSart.
+        if (block = freeStart) {
+            freeStart = block[1];
+        }
+
+        return block + 2;
+    }
+
+    /** De-allocates the given object (cast as an array) by making
+     *  it available for future allocations. */
+    function void deAlloc(Array o) {
+        return;
+    }
+}
