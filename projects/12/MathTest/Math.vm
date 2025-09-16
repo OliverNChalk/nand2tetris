@@ -85,9 +85,74 @@ label Math_6
 label Math_5
     push local 1
     return
-function Math.divide 0
-    push constant 420
+function Math.divide 4
+    push argument 0
+    push constant 0
+    lt
+    pop local 1
+    push argument 1
+    push constant 0
+    lt
+    pop local 2
+    push argument 0
+    call Math.abs 1
+    pop argument 0
+    push argument 1
+    call Math.abs 1
+    pop argument 1
+    push argument 1
+    push argument 0
+    gt
+    not
+    if-goto Math_9
+    push constant 0
     return
+    goto Math_8
+label Math_9
+label Math_8
+    push argument 0
+    push argument 1
+    push argument 1
+    add
+    call Math.divide 2
+    pop local 0
+    push argument 0
+    push constant 2
+    push local 0
+    call Math.multiply 2
+    push argument 1
+    call Math.multiply 2
+    sub
+    push argument 1
+    lt
+    not
+    if-goto Math_11
+    push local 0
+    push local 0
+    add
+    pop local 3
+    goto Math_10
+label Math_11
+    push local 0
+    push local 0
+    add
+    push constant 1
+    add
+    pop local 3
+label Math_10
+    push local 1
+    push local 2
+    eq
+    not
+    if-goto Math_13
+    push local 3
+    return
+    goto Math_12
+label Math_13
+    push local 3
+    neg
+    return
+label Math_12
 function Math.sqrt 0
     push constant 420
     return
@@ -96,12 +161,12 @@ function Math.max 0
     push argument 1
     gt
     not
-    if-goto Math_9
+    if-goto Math_15
     push argument 1
     return
-    goto Math_8
-label Math_9
-label Math_8
+    goto Math_14
+label Math_15
+label Math_14
     push argument 0
     return
 function Math.min 0
@@ -109,12 +174,12 @@ function Math.min 0
     push argument 1
     lt
     not
-    if-goto Math_11
+    if-goto Math_17
     push argument 0
     return
-    goto Math_10
-label Math_11
-label Math_10
+    goto Math_16
+label Math_17
+label Math_16
     push argument 1
     return
 function Math.bitN 0

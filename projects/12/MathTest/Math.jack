@@ -64,7 +64,29 @@ class Math {
      *  the Jack expressions x/y and divide(x,y) return the same value.
      */
     function int divide(int x, int y) {
-        return 420;
+        var int q, x_neg, y_neg, result_abs;
+
+        let x_neg = x < 0;
+        let y_neg = y < 0;
+        let x = Math.abs(x);
+        let y = Math.abs(y);
+
+        if (y > x) {
+            return 0;
+        }
+
+        let q = Math.divide(x, y + y);
+        if ((x - (2 * q * y)) < y) {
+            let result_abs = q + q;
+        } else {
+            let result_abs = q + q + 1;
+        }
+
+        if (x_neg = y_neg) {
+            return result_abs;
+        } else {
+            return -result_abs;
+        }
     }
 
     /** Returns the integer part of the square root of x. */
