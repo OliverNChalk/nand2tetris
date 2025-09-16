@@ -9,7 +9,7 @@
  * consists of 32,768 words, each holding a 16-bit binary number.
  */
 class Memory {
-    static Array mem, heap;
+    static Array mem, freeStart, freeEnd;
 
     /** Initializes the class. */
     function void init() {
@@ -42,16 +42,15 @@ class Memory {
         var Array block, parent;
         var int min;
 
-        let block = freeStart;
-        let parent = freeStart;
-        let min = cap + 2;
-
         // If freeStart is 0, we have no available blocks.
         if (freeStart = 0) {
             return -1;
         }
 
         // Find the first memory block that can fit the requested size.
+        let block = freeStart;
+        let parent = freeStart;
+        let min = cap + 2;
         while (block[0] < min) {
             if (block[1] = 0) {
                 return -1;
@@ -74,14 +73,17 @@ class Memory {
             // Write the new block's size & next fields.
             let freeEnd[0] = (block[0] - min) - 2;
             let freeEnd[1] = 0;
+
+            // Shrink the block we're about to return.
+            let block[0] = cap;
         }
 
         // Remove the block from the linked list.
-        parent[1] = block[1];
+        let parent[1] = block[1];
 
         // If this was the first block in the list, update freeSart.
         if (block = freeStart) {
-            freeStart = block[1];
+            let freeStart = block[1];
         }
 
         return block + 2;
@@ -90,6 +92,20 @@ class Memory {
     /** De-allocates the given object (cast as an array) by making
      *  it available for future allocations. */
     function void deAlloc(Array o) {
+        var int start;
+
+        if (freeStart = 0) {
+            // Handle empty free list as special case.
+            let freeStart = start;
+            let freeEnd = start;
+        } else {
+            // Append to end of free list.
+            let start = o - 2;
+            let freeEnd[1] = start;
+            let freeEnd = start;
+        }
+
+
         return;
     }
 }

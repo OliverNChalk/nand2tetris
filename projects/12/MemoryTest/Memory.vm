@@ -1,6 +1,26 @@
 function Memory.init 0
     push constant 0
     pop static 0
+    push constant 2048
+    pop static 1
+    push constant 2048
+    pop static 2
+    push constant 0
+    push static 1
+    add
+    push constant 14334
+    pop temp 0
+    pop pointer 1
+    push temp 0
+    pop that 0
+    push constant 1
+    push static 1
+    add
+    push constant 0
+    pop temp 0
+    pop pointer 1
+    push temp 0
+    pop that 0
     push constant 0
     return
 function Memory.peek 0
@@ -21,9 +41,177 @@ function Memory.poke 0
     pop that 0
     push constant 0
     return
-function Memory.alloc 0
-    push constant 11000
+function Memory.alloc 3
+    push static 1
+    push constant 0
+    eq
+    not
+    if-goto Memory_1
+    push constant 1
+    neg
     return
-function Memory.deAlloc 0
+    goto Memory_0
+label Memory_1
+label Memory_0
+    push static 1
+    pop local 0
+    push static 1
+    pop local 1
+    push argument 0
+    push constant 2
+    add
+    pop local 2
+label Memory_2
+    push constant 0
+    push local 0
+    add
+    pop pointer 1
+    push that 0
+    push local 2
+    lt
+    not
+    if-goto Memory_3
+    push constant 1
+    push local 0
+    add
+    pop pointer 1
+    push that 0
+    push constant 0
+    eq
+    not
+    if-goto Memory_5
+    push constant 1
+    neg
+    return
+    goto Memory_4
+label Memory_5
+label Memory_4
+    push local 0
+    pop local 1
+    push constant 1
+    push local 0
+    add
+    pop pointer 1
+    push that 0
+    pop local 0
+    goto Memory_2
+label Memory_3
+    push constant 0
+    push local 0
+    add
+    pop pointer 1
+    push that 0
+    push local 2
+    push constant 2
+    add
+    gt
+    not
+    if-goto Memory_7
+    push constant 1
+    push static 2
+    add
+    push local 0
+    push local 2
+    add
+    pop temp 0
+    pop pointer 1
+    push temp 0
+    pop that 0
+    push local 0
+    push local 2
+    add
+    pop static 2
+    push constant 0
+    push static 2
+    add
+    push constant 0
+    push local 0
+    add
+    pop pointer 1
+    push that 0
+    push local 2
+    sub
+    push constant 2
+    sub
+    pop temp 0
+    pop pointer 1
+    push temp 0
+    pop that 0
+    push constant 1
+    push static 2
+    add
+    push constant 0
+    pop temp 0
+    pop pointer 1
+    push temp 0
+    pop that 0
+    push constant 0
+    push local 0
+    add
+    push argument 0
+    pop temp 0
+    pop pointer 1
+    push temp 0
+    pop that 0
+    goto Memory_6
+label Memory_7
+label Memory_6
+    push constant 1
+    push local 1
+    add
+    push constant 1
+    push local 0
+    add
+    pop pointer 1
+    push that 0
+    pop temp 0
+    pop pointer 1
+    push temp 0
+    pop that 0
+    push local 0
+    push static 1
+    eq
+    not
+    if-goto Memory_9
+    push constant 1
+    push local 0
+    add
+    pop pointer 1
+    push that 0
+    pop static 1
+    goto Memory_8
+label Memory_9
+label Memory_8
+    push local 0
+    push constant 2
+    add
+    return
+function Memory.deAlloc 1
+    push static 1
+    push constant 0
+    eq
+    not
+    if-goto Memory_11
+    push local 0
+    pop static 1
+    push local 0
+    pop static 2
+    goto Memory_10
+label Memory_11
+    push argument 0
+    push constant 2
+    sub
+    pop local 0
+    push constant 1
+    push static 2
+    add
+    push local 0
+    pop temp 0
+    pop pointer 1
+    push temp 0
+    pop that 0
+    push local 0
+    pop static 2
+label Memory_10
     push constant 0
     return
