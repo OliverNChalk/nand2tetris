@@ -107,87 +107,55 @@ label Screen_3
 label Screen_2
     push constant 0
     return
-function Screen.drawLine 7
+function Screen.drawLine 1
+    push argument 0
+    push argument 2
+    gt
+    not
+    if-goto Screen_5
+    push argument 2
+    pop local 0
+    push argument 0
+    pop argument 2
+    push local 0
+    pop argument 0
+    push argument 3
+    pop local 0
+    push argument 1
+    pop argument 3
+    push local 0
+    pop argument 1
+    goto Screen_4
+label Screen_5
+label Screen_4
     push argument 1
     push argument 3
     eq
     not
-    if-goto Screen_5
+    if-goto Screen_7
     push argument 0
     push argument 2
     push argument 1
     call Screen.drawHorizontalLine 3
     pop temp 0
-    goto Screen_4
-label Screen_5
-label Screen_4
-    push argument 0
-    pop local 0
-    push argument 1
-    pop local 1
-    push argument 2
-    push argument 0
-    sub
-    pop local 2
-    push argument 3
-    push argument 1
-    sub
-    pop local 3
-label Screen_6
-    push local 4
-    push local 2
-    gt
-    not
-    push local 5
-    push local 3
-    gt
-    not
-    and
-    not
-    if-goto Screen_7
-    push local 0
-    push local 4
-    add
-    push local 1
-    push local 5
-    add
-    call Screen.drawPixel 2
-    pop temp 0
-    push local 6
-    push constant 0
-    lt
-    not
-    if-goto Screen_9
-    push local 4
-    push constant 1
-    add
-    pop local 4
-    push local 6
-    push local 3
-    add
-    pop local 6
-    goto Screen_8
-label Screen_9
-    push local 5
-    push constant 1
-    add
-    pop local 5
-    push local 6
-    push local 2
-    sub
-    pop local 6
-label Screen_8
     goto Screen_6
 label Screen_7
+label Screen_6
+    push argument 0
+    push argument 1
+    push argument 2
+    push argument 3
+    call Screen.drawDiagonal 4
+    pop temp 0
     push constant 0
     return
 function Screen.drawHorizontalLine 0
-label Screen_10
+label Screen_8
     push argument 0
     push argument 1
     lt
     not
-    if-goto Screen_11
+    if-goto Screen_9
     push argument 0
     push argument 2
     call Screen.drawPixel 2
@@ -196,8 +164,83 @@ label Screen_10
     push constant 1
     add
     pop argument 0
+    goto Screen_8
+label Screen_9
+    push constant 0
+    return
+function Screen.drawDiagonal 7
+    push argument 2
+    push argument 0
+    sub
+    pop local 2
+    push argument 3
+    push argument 1
+    sub
+    pop local 3
+    push local 3
+    push constant 0
+    lt
+    not
+    if-goto Screen_11
+    push constant 1
+    neg
+    pop local 5
+    push local 3
+    neg
+    pop local 4
     goto Screen_10
 label Screen_11
+    push constant 1
+    pop local 5
+    push local 3
+    pop local 4
+label Screen_10
+label Screen_12
+    push local 0
+    push local 2
+    gt
+    not
+    push local 1
+    push local 3
+    eq
+    not
+    and
+    not
+    if-goto Screen_13
+    push argument 0
+    push local 0
+    add
+    push argument 1
+    push local 1
+    add
+    call Screen.drawPixel 2
+    pop temp 0
+    push local 6
+    push constant 0
+    lt
+    not
+    if-goto Screen_15
+    push local 0
+    push constant 1
+    add
+    pop local 0
+    push local 6
+    push local 4
+    add
+    pop local 6
+    goto Screen_14
+label Screen_15
+    push local 1
+    push local 5
+    add
+    pop local 1
+    push local 6
+    push local 2
+    sub
+    pop local 6
+label Screen_14
+    goto Screen_12
+label Screen_13
     push constant 0
     return
 function Screen.drawRectangle 0
