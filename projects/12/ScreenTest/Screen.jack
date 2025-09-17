@@ -120,7 +120,7 @@ class Screen {
             let dyAbs = dy;
         }
 
-        while (~(xDelta > dx) & ~(yDelta = dy)) {
+        while (~(xDelta > dx) & ~(Math.abs(yDelta) > dyAbs)) {
             do Screen.drawPixel(x1 + xDelta, y1 + yDelta);
 
             if (diff < 0) {

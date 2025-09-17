@@ -201,8 +201,9 @@ label Screen_12
     gt
     not
     push local 1
-    push local 3
-    eq
+    call Math.abs 1
+    push local 4
+    gt
     not
     and
     not
