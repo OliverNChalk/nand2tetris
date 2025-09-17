@@ -138,6 +138,11 @@ class Screen {
     /** Draws a filled rectangle whose top left corner is (x1, y1)
      * and bottom right corner is (x2,y2), using the current color. */
     function void drawRectangle(int x1, int y1, int x2, int y2) {
+        while (~(y1 > y2)) {
+            do Screen.drawLine(x1, y1, x2, y1);
+            let y1 = y1 + 1;
+        }
+
         return;
     }
 
@@ -148,7 +153,7 @@ class Screen {
         let dy = -r;
         let rSquared = r * r;
 
-        while (dy < r) {
+        while (~(dy > r)) {
             let halfWidth = Math.sqrt(rSquared - (dy * dy));
             do Screen.drawLine(x - halfWidth, y + dy, x + halfWidth, y + dy);
             let dy = dy + 1;

@@ -245,6 +245,25 @@ label Screen_13
     push constant 0
     return
 function Screen.drawRectangle 0
+label Screen_16
+    push argument 1
+    push argument 3
+    gt
+    not
+    not
+    if-goto Screen_17
+    push argument 0
+    push argument 1
+    push argument 2
+    push argument 1
+    call Screen.drawLine 4
+    pop temp 0
+    push argument 1
+    push constant 1
+    add
+    pop argument 1
+    goto Screen_16
+label Screen_17
     push constant 0
     return
 function Screen.drawCircle 3
@@ -255,12 +274,13 @@ function Screen.drawCircle 3
     push argument 2
     call Math.multiply 2
     pop local 1
-label Screen_16
+label Screen_18
     push local 0
     push argument 2
-    lt
+    gt
     not
-    if-goto Screen_17
+    not
+    if-goto Screen_19
     push local 1
     push local 0
     push local 0
@@ -286,8 +306,8 @@ label Screen_16
     push constant 1
     add
     pop local 0
-    goto Screen_16
-label Screen_17
+    goto Screen_18
+label Screen_19
     push constant 0
     return
 function Screen.bitN 0
