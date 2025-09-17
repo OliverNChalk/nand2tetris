@@ -1,9 +1,11 @@
 function Screen.init 2
     push constant 16
     call Array.new 1
-    pop static 2
+    pop static 1
     push constant 1
     pop local 1
+    push constant 0
+    pop local 0
 label Screen_0
     push local 0
     push constant 16
@@ -11,7 +13,7 @@ label Screen_0
     not
     if-goto Screen_1
     push local 0
-    push static 2
+    push static 1
     add
     push local 1
     pop temp 0
@@ -29,11 +31,10 @@ label Screen_0
     goto Screen_0
 label Screen_1
     push constant 16384
-    pop static 3
+    pop static 2
     push constant 1
+    neg
     pop static 0
-    push constant 1
-    pop static 1
     push constant 0
     return
 function Screen.clearScreen 0
@@ -41,24 +42,11 @@ function Screen.clearScreen 0
     return
 function Screen.setColor 0
     push argument 0
-    not
-    if-goto Screen_3
-    push constant 1
     pop static 0
-    push constant 1
-    pop static 1
-    goto Screen_2
-label Screen_3
-    push constant 0
-    pop static 0
-    push constant 1
-    neg
-    pop static 1
-label Screen_2
     push constant 0
     return
 function Screen.drawPixel 3
-    push constant 512
+    push constant 32
     push argument 1
     call Math.multiply 2
     push argument 0
@@ -66,12 +54,6 @@ function Screen.drawPixel 3
     call Math.divide 2
     add
     pop local 0
-    push local 1
-    push static 3
-    add
-    pop pointer 1
-    push that 0
-    pop local 1
     push argument 0
     push argument 0
     push constant 16
@@ -80,37 +62,142 @@ function Screen.drawPixel 3
     call Math.multiply 2
     sub
     pop local 2
-    push local 1
-    push local 2
-    call Screen.bitN 2
     push static 0
-    eq
     not
-    if-goto Screen_5
-    push constant 0
-    return
-    goto Screen_4
-label Screen_5
-label Screen_4
+    if-goto Screen_3
     push local 0
-    push static 3
+    push static 2
     add
-    push local 1
-    push local 2
+    push local 0
     push static 2
     add
     pop pointer 1
     push that 0
+    push local 2
     push static 1
-    call Math.multiply 2
     add
+    pop pointer 1
+    push that 0
+    or
     pop temp 0
     pop pointer 1
     push temp 0
     pop that 0
+    goto Screen_2
+label Screen_3
+    push local 0
+    push static 2
+    add
+    push local 0
+    push static 2
+    add
+    pop pointer 1
+    push that 0
+    push local 2
+    push static 1
+    add
+    pop pointer 1
+    push that 0
+    not
+    and
+    pop temp 0
+    pop pointer 1
+    push temp 0
+    pop that 0
+label Screen_2
     push constant 0
     return
-function Screen.drawLine 0
+function Screen.drawLine 7
+    push argument 1
+    push argument 3
+    eq
+    not
+    if-goto Screen_5
+    push argument 0
+    push argument 2
+    push argument 1
+    call Screen.drawHorizontalLine 3
+    pop temp 0
+    goto Screen_4
+label Screen_5
+label Screen_4
+    push argument 0
+    pop local 0
+    push argument 1
+    pop local 1
+    push argument 2
+    push argument 0
+    sub
+    pop local 2
+    push argument 3
+    push argument 1
+    sub
+    pop local 3
+label Screen_6
+    push local 4
+    push local 2
+    gt
+    not
+    push local 5
+    push local 3
+    gt
+    not
+    and
+    not
+    if-goto Screen_7
+    push local 0
+    push local 4
+    add
+    push local 1
+    push local 5
+    add
+    call Screen.drawPixel 2
+    pop temp 0
+    push local 6
+    push constant 0
+    lt
+    not
+    if-goto Screen_9
+    push local 4
+    push constant 1
+    add
+    pop local 4
+    push local 6
+    push local 3
+    add
+    pop local 6
+    goto Screen_8
+label Screen_9
+    push local 5
+    push constant 1
+    add
+    pop local 5
+    push local 6
+    push local 2
+    sub
+    pop local 6
+label Screen_8
+    goto Screen_6
+label Screen_7
+    push constant 0
+    return
+function Screen.drawHorizontalLine 0
+label Screen_10
+    push argument 0
+    push argument 1
+    lt
+    not
+    if-goto Screen_11
+    push argument 0
+    push argument 2
+    call Screen.drawPixel 2
+    pop temp 0
+    push argument 0
+    push constant 1
+    add
+    pop argument 0
+    goto Screen_10
+label Screen_11
     push constant 0
     return
 function Screen.drawRectangle 0
@@ -122,13 +209,13 @@ function Screen.drawCircle 0
 function Screen.bitN 0
     push argument 0
     push argument 1
-    push static 2
+    push static 1
     add
     pop pointer 1
     push that 0
     and
     push argument 1
-    push static 2
+    push static 1
     add
     pop pointer 1
     push that 0

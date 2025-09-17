@@ -10,16 +10,16 @@
  * the screen is indexed (0,0).
  */
 class Screen {
-    static int color, colorMultiplier;
+    static boolean color;
     static Array mask, screen;
 
     /** Initializes the Screen. */
     function void init() {
         var int i, val;
 
-        // Initialize the bitmask array.
         let mask = Array.new(16);
         let val = 1;
+        let i = 0;
         while (i < 16) {
             let mask[i] = val;
             let val = val + val;
@@ -30,8 +30,7 @@ class Screen {
         let screen = 16384;
 
         // Default color to true (on).
-        let color = 1;
-        let colorMultiplier = 1;
+        let color = true;
 
         return;
     }
@@ -44,47 +43,65 @@ class Screen {
     /** Sets the current color, to be used for all subsequent drawXXX commands.
      *  Black is represented by true, white by false. */
     function void setColor(boolean b) {
-        if (b) {
-            let color = 1;
-            let colorMultiplier = 1;
-        } else {
-            let color = 0;
-            let colorMultiplier = -1;
-        }
+        let color = b;
 
         return;
     }
 
     /** Draws the (x,y) pixel, using the current color. */
     function void drawPixel(int x, int y) {
-        // 512 wide
-        // 256 high
-        //
-        // - To write to the 0th row start at base.
-        // - To write to the 1st row start at base + 512.
-        // - To write to the nth row start at base + (512 * n).
-        // - To write to the nth column do base + row + (n / 16);
-
         var int chunk, chunkVal, index;
 
         // Compute the chunk of memory this pixel is contained in.
-        let chunk = (512 * y) + (x / 16);
-        let chunkVal = screen[chunkVal];
+        let chunk = (32 * y) + (x / 16);
         let index = x - ((x / 16) * 16);
 
-        // Bail if the pixel is already the target color.
-        if (Screen.bitN(chunkVal, index) = color) {
-            return;
-        }
-
         // Update the pixel & write the chunk back to the screen.
-        let screen[chunk] = chunkVal + (mask[index] * colorMultiplier);
+        if (color) {
+            let screen[chunk] = screen[chunk] | mask[index];
+        } else {
+            let screen[chunk] = screen[chunk] & ~mask[index];
+        }
 
         return;
     }
 
     /** Draws a line from pixel (x1,y1) to pixel (x2,y2), using the current color. */
     function void drawLine(int x1, int y1, int x2, int y2) {
+        var int x, y, dx, dy, a, b, diff;
+
+        // Handle dy = 0 as a special case.
+        if (y1 = y2) {
+            do Screen.drawHorizontalLine(x1, x2, y1);
+        }
+
+        let x = x1;
+        let y = y1;
+        // TODO: What about drawing a line right to left? Should sort the points first?
+        let dx = x2 - x1;
+        let dy = y2 - y1;
+
+        while (~(a > dx) & ~(b > dy)) {
+            do Screen.drawPixel(x + a, y + b);
+
+            if (diff < 0) {
+                let a = a + 1;
+                let diff = diff + dy;
+            } else {
+                let b = b + 1;
+                let diff = diff - dx;
+            }
+        }
+
+        return;
+    }
+
+    function void drawHorizontalLine(int x1, int x2, int y) {
+        while (x1 < x2) {
+            do Screen.drawPixel(x1, y);
+            let x1 = x1 + 1;
+        }
+
         return;
     }
 
