@@ -1,5 +1,10 @@
 function Main.main 0
     push constant 140
+    push constant 60
+    push constant 30
+    call Screen.drawCircle 3
+    pop temp 0
+    push constant 140
     push constant 26
     push constant 140
     push constant 6
