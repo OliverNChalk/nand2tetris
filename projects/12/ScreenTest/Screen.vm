@@ -149,13 +149,82 @@ label Screen_6
     pop temp 0
     push constant 0
     return
-function Screen.drawHorizontalLine 0
-label Screen_8
+function Screen.drawHorizontalLine 2
     push argument 0
-    push argument 1
-    lt
+    push constant 16
+    call Screen.mod 2
+    pop local 0
+    push local 0
+    push constant 0
+    gt
     not
     if-goto Screen_9
+    push argument 0
+    push argument 0
+    push constant 15
+    add
+    push local 0
+    sub
+    push argument 1
+    call Math.min 2
+    push argument 2
+    call Screen.drawHorizontalLineShort 3
+    pop temp 0
+    push argument 0
+    push constant 16
+    add
+    push local 0
+    sub
+    pop argument 0
+    goto Screen_8
+label Screen_9
+label Screen_8
+    push argument 2
+    push constant 32
+    call Math.multiply 2
+    pop local 1
+label Screen_10
+    push argument 0
+    push constant 16
+    add
+    push argument 1
+    gt
+    not
+    not
+    if-goto Screen_11
+    push local 1
+    push argument 0
+    push constant 16
+    call Math.divide 2
+    add
+    push static 2
+    add
+    push static 0
+    pop temp 0
+    pop pointer 1
+    push temp 0
+    pop that 0
+    push argument 0
+    push constant 16
+    add
+    pop argument 0
+    goto Screen_10
+label Screen_11
+    push argument 0
+    push argument 1
+    push argument 2
+    call Screen.drawHorizontalLineShort 3
+    pop temp 0
+    push constant 0
+    return
+function Screen.drawHorizontalLineShort 0
+label Screen_12
+    push argument 0
+    push argument 1
+    gt
+    not
+    not
+    if-goto Screen_13
     push argument 0
     push argument 2
     call Screen.drawPixel 2
@@ -164,8 +233,8 @@ label Screen_8
     push constant 1
     add
     pop argument 0
-    goto Screen_8
-label Screen_9
+    goto Screen_12
+label Screen_13
     push constant 0
     return
 function Screen.drawDiagonal 7
@@ -181,21 +250,21 @@ function Screen.drawDiagonal 7
     push constant 0
     lt
     not
-    if-goto Screen_11
+    if-goto Screen_15
     push constant 1
     neg
     pop local 5
     push local 3
     neg
     pop local 4
-    goto Screen_10
-label Screen_11
+    goto Screen_14
+label Screen_15
     push constant 1
     pop local 5
     push local 3
     pop local 4
-label Screen_10
-label Screen_12
+label Screen_14
+label Screen_16
     push local 0
     push local 2
     gt
@@ -207,7 +276,7 @@ label Screen_12
     not
     and
     not
-    if-goto Screen_13
+    if-goto Screen_17
     push argument 0
     push local 0
     add
@@ -220,7 +289,7 @@ label Screen_12
     push constant 0
     lt
     not
-    if-goto Screen_15
+    if-goto Screen_19
     push local 0
     push constant 1
     add
@@ -229,8 +298,8 @@ label Screen_12
     push local 4
     add
     pop local 6
-    goto Screen_14
-label Screen_15
+    goto Screen_18
+label Screen_19
     push local 1
     push local 5
     add
@@ -239,19 +308,19 @@ label Screen_15
     push local 2
     sub
     pop local 6
-label Screen_14
-    goto Screen_12
-label Screen_13
+label Screen_18
+    goto Screen_16
+label Screen_17
     push constant 0
     return
 function Screen.drawRectangle 0
-label Screen_16
+label Screen_20
     push argument 1
     push argument 3
     gt
     not
     not
-    if-goto Screen_17
+    if-goto Screen_21
     push argument 0
     push argument 1
     push argument 2
@@ -262,8 +331,8 @@ label Screen_16
     push constant 1
     add
     pop argument 1
-    goto Screen_16
-label Screen_17
+    goto Screen_20
+label Screen_21
     push constant 0
     return
 function Screen.drawCircle 3
@@ -274,13 +343,13 @@ function Screen.drawCircle 3
     push argument 2
     call Math.multiply 2
     pop local 1
-label Screen_18
+label Screen_22
     push local 0
     push argument 2
     gt
     not
     not
-    if-goto Screen_19
+    if-goto Screen_23
     push local 1
     push local 0
     push local 0
@@ -306,8 +375,8 @@ label Screen_18
     push constant 1
     add
     pop local 0
-    goto Screen_18
-label Screen_19
+    goto Screen_22
+label Screen_23
     push constant 0
     return
 function Screen.bitN 0
@@ -327,4 +396,13 @@ function Screen.bitN 0
     neg
     pop argument 0
     push argument 0
+    return
+function Screen.mod 0
+    push argument 0
+    push argument 0
+    push argument 1
+    call Math.divide 2
+    push argument 1
+    call Math.multiply 2
+    sub
     return

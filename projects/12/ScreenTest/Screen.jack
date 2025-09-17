@@ -54,6 +54,7 @@ class Screen {
 
         // Compute the chunk of memory this pixel is contained in.
         let chunk = (32 * y) + (x / 16);
+        // TODO: Use mod routine.
         let index = x - ((x / 16) * 16);
 
         // Update the pixel & write the chunk back to the screen.
@@ -95,7 +96,30 @@ class Screen {
     }
 
     function void drawHorizontalLine(int x1, int x2, int y) {
-        while (x1 < x2) {
+        var int tmp, yOffset;
+
+        // Write the first partial chunk.
+        let tmp = Screen.mod(x1, 16);
+        if (tmp > 0) {
+            do Screen.drawHorizontalLineShort(x1, Math.min(x1 + 15 - tmp, x2), y);
+            let x1 = x1 + 16 - tmp;
+        }
+
+        // Write full 16 bit chunks until we are about to overshoot.
+        let yOffset = y * 32;
+        while (~((x1 + 16) > x2)) {
+            let screen[yOffset + (x1 / 16)] = color;
+            let x1 = x1 + 16;
+        }
+
+        // Write the trailing partial chunk.
+        do Screen.drawHorizontalLineShort(x1, x2, y);
+
+        return;
+    }
+
+    function void drawHorizontalLineShort(int x1, int x2, int y) {
+         while (~(x1 > x2)) {
             do Screen.drawPixel(x1, y);
             let x1 = x1 + 1;
         }
@@ -166,5 +190,9 @@ class Screen {
         let a = -((a & mask[i]) = mask[i]);
 
         return a;
+    }
+
+    function int mod(int a, int b) {
+        return a - ((a / b) * b);
     }
 }
