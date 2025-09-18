@@ -1610,13 +1610,95 @@ label Output_8
 label Output_7
     push constant 0
     return
-function Output.printString 0
+function Output.printString 1
+label Output_10
+    push local 0
+    push argument 0
+    call String.length 1
+    lt
+    not
+    if-goto Output_11
+    push argument 0
+    push local 0
+    call String.charAt 2
+    call Output.printChar 1
+    pop temp 0
+    push local 0
+    push constant 1
+    add
+    pop local 0
+    goto Output_10
+label Output_11
     push constant 0
     return
 function Output.printInt 0
+    push argument 0
+    push constant 0
+    lt
+    not
+    if-goto Output_13
+    push constant 45
+    call Output.printChar 1
+    pop temp 0
+    push argument 0
+    neg
+    pop argument 0
+    goto Output_12
+label Output_13
+label Output_12
+    push argument 0
+    call Output.printIntInner 1
+    pop temp 0
+    push constant 0
+    return
+function Output.printIntInner 1
+    push argument 0
+    push constant 10
+    gt
+    not
+    if-goto Output_15
+    push argument 0
+    push constant 10
+    call Math.divide 2
+    call Output.printIntInner 1
+    pop temp 0
+    goto Output_14
+label Output_15
+label Output_14
+    push argument 0
+    push constant 10
+    call Math.divide 2
+    pop local 0
+    push argument 0
+    push local 0
+    push constant 10
+    call Math.multiply 2
+    sub
+    pop local 0
+    push local 0
+    push constant 48
+    add
+    call Output.printChar 1
+    pop temp 0
     push constant 0
     return
 function Output.println 0
+    push static 1
+    push constant 1
+    add
+    pop static 1
+    push constant 0
+    pop static 0
+    push static 1
+    push constant 22
+    gt
+    not
+    if-goto Output_17
+    push constant 0
+    pop static 1
+    goto Output_16
+label Output_17
+label Output_16
     push constant 0
     return
 function Output.backSpace 0

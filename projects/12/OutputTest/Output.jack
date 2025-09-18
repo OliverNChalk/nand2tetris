@@ -244,17 +244,57 @@ class Output {
     /** displays the given string starting at the cursor location,
      *  and advances the cursor appropriately. */
     function void printString(String s) {
+        var int i;
+
+        while (i < s.length()) {
+            do Output.printChar(s.charAt(i));
+            let i = i + 1;
+        }
+
         return;
     }
 
     /** Displays the given integer starting at the cursor location,
      *  and advances the cursor appropriately. */
     function void printInt(int i) {
+        if (i < 0) {
+            do Output.printChar(45);
+            let i = -i;
+        }
+
+        do Output.printIntInner(i);
+
+        return;
+    }
+
+
+    function void printIntInner(int val) {
+        var int rem;
+
+        // If we are not processing the last digit, recurse.
+        if (val > 10) {
+            do Output.printIntInner(val / 10);
+        }
+
+        // Compute the remainder.
+        let rem = val / 10;
+        let rem = val - (rem * 10);
+
+        // Print the char.
+        do Output.printChar(rem + 48);
+
         return;
     }
 
     /** Advances the cursor to the beginning of the next line. */
     function void println() {
+        let yRow = yRow + 1;
+        let xCol = 0;
+
+        if (yRow > 22) {
+            let yRow = 0;
+        }
+
         return;
     }
 
