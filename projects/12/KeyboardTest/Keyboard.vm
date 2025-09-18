@@ -1,0 +1,17 @@
+function Keyboard.init 0
+    push constant 24576
+    pop static 0
+    push constant 0
+    return
+function Keyboard.keyPressed 0
+    push constant 0
+    return
+function Keyboard.readChar 0
+    push constant 0
+    return
+function Keyboard.readLine 0
+    push constant 0
+    return
+function Keyboard.readInt 0
+    push constant 0
+    return
