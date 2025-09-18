@@ -190,7 +190,7 @@ class Output {
         let yRow = i;
         let xCol = j;
 
-        do Output.printCharInner(32);
+        do Output.eraseChar();
 
         return;
     }
@@ -198,25 +198,6 @@ class Output {
     /** Displays the given character at the cursor location,
      *  and advances the cursor one column forward. */
     function void printChar(char c) {
-        do Output.printCharInner(c);
-
-        // Advance one column (wrapping around at line/screen end).
-        if (xCol = 63) {
-            if (yRow = 22) {
-                let yRow = 0;
-                let xCol = 0;
-            } else {
-                let yRow = yRow + 1;
-                let xCol = 0;
-            }
-        } else {
-            let xCol = xCol + 1;
-        }
-
-        return;
-    }
-
-    function void printCharInner(char c) {
         var Array bitmap;
         var int chunk, side, i;
 
@@ -233,9 +214,22 @@ class Output {
                 let screen[chunk] = screen[chunk] | (bitmap[i] * 256);
             }
 
-            // Move down 1 in the  y axis.
+            // Move down 1 in the y axis.
             let chunk = chunk + 32;
             let i = i + 1;
+        }
+
+        // Advance one column (wrapping around at line/screen end).
+        if (xCol = 63) {
+            if (yRow = 22) {
+                let yRow = 0;
+                let xCol = 0;
+            } else {
+                let yRow = yRow + 1;
+                let xCol = 0;
+            }
+        } else {
+            let xCol = xCol + 1;
         }
 
         return;
@@ -300,6 +294,41 @@ class Output {
 
     /** Moves the cursor one column back. */
     function void backSpace() {
+        if ((xCol = 0) & (yRow = 0)) {
+            return;
+        }
+
+        if (xCol = 0) {
+            let yRow = yRow - 1;
+            let xCol = 63;
+        } else {
+            let xCol = xCol - 1;
+        }
+
+        do Output.eraseChar();
+
+        return;
+    }
+
+    function void eraseChar() {
+        var int chunk, side, i;
+
+        let chunk = (yRow * 352) + (xCol / 2);
+        let side = xCol & 1;
+
+        // Clear all pixels under the cursor.
+        while (i < 11) {
+            if (side = 0) {
+                let screen[chunk] = screen[chunk] & -256;
+            } else {
+                let screen[chunk] = screen[chunk] & 255;
+            }
+
+            // Move down 1 in the y axis.
+            let chunk = chunk + 32;
+            let i = i + 1;
+        }
+
         return;
     }
 }

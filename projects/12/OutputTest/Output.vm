@@ -1489,48 +1489,11 @@ function Output.moveCursor 0
     pop static 1
     push argument 1
     pop static 0
-    push constant 32
-    call Output.printCharInner 1
+    call Output.eraseChar 0
     pop temp 0
     push constant 0
     return
-function Output.printChar 0
-    push argument 0
-    call Output.printCharInner 1
-    pop temp 0
-    push static 0
-    push constant 63
-    eq
-    not
-    if-goto Output_3
-    push static 1
-    push constant 22
-    eq
-    not
-    if-goto Output_5
-    push constant 0
-    pop static 1
-    push constant 0
-    pop static 0
-    goto Output_4
-label Output_5
-    push static 1
-    push constant 1
-    add
-    pop static 1
-    push constant 0
-    pop static 0
-label Output_4
-    goto Output_2
-label Output_3
-    push static 0
-    push constant 1
-    add
-    pop static 0
-label Output_2
-    push constant 0
-    return
-function Output.printCharInner 4
+function Output.printChar 4
     push argument 0
     call Output.getMap 1
     pop local 0
@@ -1546,17 +1509,17 @@ function Output.printCharInner 4
     push constant 1
     and
     pop local 2
-label Output_6
+label Output_2
     push local 3
     push constant 11
     lt
     not
-    if-goto Output_7
+    if-goto Output_3
     push local 2
     push constant 0
     eq
     not
-    if-goto Output_9
+    if-goto Output_5
     push local 1
     push static 2
     add
@@ -1575,8 +1538,8 @@ label Output_6
     pop pointer 1
     push temp 0
     pop that 0
-    goto Output_8
-label Output_9
+    goto Output_4
+label Output_5
     push local 1
     push static 2
     add
@@ -1597,7 +1560,7 @@ label Output_9
     pop pointer 1
     push temp 0
     pop that 0
-label Output_8
+label Output_4
     push local 1
     push constant 32
     add
@@ -1606,8 +1569,38 @@ label Output_8
     push constant 1
     add
     pop local 3
+    goto Output_2
+label Output_3
+    push static 0
+    push constant 63
+    eq
+    not
+    if-goto Output_7
+    push static 1
+    push constant 22
+    eq
+    not
+    if-goto Output_9
+    push constant 0
+    pop static 1
+    push constant 0
+    pop static 0
+    goto Output_8
+label Output_9
+    push static 1
+    push constant 1
+    add
+    pop static 1
+    push constant 0
+    pop static 0
+label Output_8
     goto Output_6
 label Output_7
+    push static 0
+    push constant 1
+    add
+    pop static 0
+label Output_6
     push constant 0
     return
 function Output.printString 1
@@ -1702,5 +1695,107 @@ label Output_16
     push constant 0
     return
 function Output.backSpace 0
+    push static 0
+    push constant 0
+    eq
+    push static 1
+    push constant 0
+    eq
+    and
+    not
+    if-goto Output_19
+    push constant 0
+    return
+    goto Output_18
+label Output_19
+label Output_18
+    push static 0
+    push constant 0
+    eq
+    not
+    if-goto Output_21
+    push static 1
+    push constant 1
+    sub
+    pop static 1
+    push constant 63
+    pop static 0
+    goto Output_20
+label Output_21
+    push static 0
+    push constant 1
+    sub
+    pop static 0
+label Output_20
+    call Output.eraseChar 0
+    pop temp 0
+    push constant 0
+    return
+function Output.eraseChar 3
+    push static 1
+    push constant 352
+    call Math.multiply 2
+    push static 0
+    push constant 2
+    call Math.divide 2
+    add
+    pop local 0
+    push static 0
+    push constant 1
+    and
+    pop local 1
+label Output_22
+    push local 2
+    push constant 11
+    lt
+    not
+    if-goto Output_23
+    push local 1
+    push constant 0
+    eq
+    not
+    if-goto Output_25
+    push local 0
+    push static 2
+    add
+    push local 0
+    push static 2
+    add
+    pop pointer 1
+    push that 0
+    push constant 256
+    neg
+    and
+    pop temp 0
+    pop pointer 1
+    push temp 0
+    pop that 0
+    goto Output_24
+label Output_25
+    push local 0
+    push static 2
+    add
+    push local 0
+    push static 2
+    add
+    pop pointer 1
+    push that 0
+    push constant 255
+    and
+    pop temp 0
+    pop pointer 1
+    push temp 0
+    pop that 0
+label Output_24
+    push local 0
+    push constant 32
+    add
+    pop local 0
+    push local 2
+    push constant 1
+    add
+    pop local 2
+    goto Output_22
+label Output_23
     push constant 0
     return
