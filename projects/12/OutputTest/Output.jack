@@ -190,19 +190,33 @@ class Output {
         let yRow = i;
         let xCol = j;
 
+        do Output.printCharInner(32);
+
         return;
     }
 
     /** Displays the given character at the cursor location,
      *  and advances the cursor one column forward. */
     function void printChar(char c) {
-        // TODO
-        //
-        // - Load character bitmap.
-        // - Load target chunk.
-        // - Determine if we are writing to left/right side of chunk.
+        do Output.printCharInner(c);
 
+        // Advance one column (wrapping around at line/screen end).
+        if (xCol = 63) {
+            if (yRow = 22) {
+                let yRow = 0;
+                let xCol = 0;
+            } else {
+                let yRow = yRow + 1;
+                let xCol = 0;
+            }
+        } else {
+            let xCol = xCol + 1;
+        }
 
+        return;
+    }
+
+    function void printCharInner(char c) {
         var Array bitmap;
         var int chunk, side, i;
 
@@ -210,6 +224,7 @@ class Output {
         let chunk = (yRow * 352) + (xCol / 2);
         let side = xCol & 1;
 
+        // Write the char via its bitmap representation.
         while (i < 11) {
             // Merge our bitmap pixels in.
             if (side = 0) {
