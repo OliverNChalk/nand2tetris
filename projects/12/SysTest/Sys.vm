@@ -1,0 +1,48 @@
+function Sys.init 0
+    call Memory.init 0
+    pop temp 0
+    call Math.init 0
+    pop temp 0
+    call Keyboard.init 0
+    pop temp 0
+    call Output.init 0
+    pop temp 0
+    call Main.main 0
+    pop temp 0
+    push constant 0
+    return
+function Sys.halt 0
+    push constant 0
+    return
+function Sys.wait 1
+label Sys_0
+    push argument 0
+    push constant 0
+    gt
+    not
+    if-goto Sys_1
+    push constant 200
+    pop local 0
+label Sys_2
+    push local 0
+    push constant 0
+    gt
+    not
+    if-goto Sys_3
+    push local 0
+    push constant 1
+    sub
+    pop local 0
+    goto Sys_2
+label Sys_3
+    push argument 0
+    push constant 1
+    sub
+    pop argument 0
+    goto Sys_0
+label Sys_1
+    push constant 0
+    return
+function Sys.error 0
+    push constant 0
+    return
