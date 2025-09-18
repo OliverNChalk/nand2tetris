@@ -16,6 +16,7 @@
  */
 class Output {
     static int xCol, yRow;
+    static Array screen;
 
     // Character map for displaying characters
     static Array charMaps;
@@ -27,6 +28,7 @@ class Output {
 
         let xCol = 0;
         let yRow = 0;
+        let screen = 16384;
 
         return;
     }
@@ -178,6 +180,7 @@ class Output {
         if ((c < 32) | (c > 126)) {
             let c = 0;
         }
+
         return charMaps[c];
     }
 
@@ -193,6 +196,34 @@ class Output {
     /** Displays the given character at the cursor location,
      *  and advances the cursor one column forward. */
     function void printChar(char c) {
+        // TODO
+        //
+        // - Load character bitmap.
+        // - Load target chunk.
+        // - Determine if we are writing to left/right side of chunk.
+
+
+        var Array bitmap;
+        var int chunk, side, i;
+
+        let bitmap = Output.getMap(c);
+        let chunk = (yRow * 352) + (xCol / 2);
+        let side = xCol & 1;
+
+        while (i < 11) {
+            // If we are writing to the right side of the chunk, then we must shift.
+            if (side = 1) {
+                let bitmap = bitmap * 256;
+            }
+
+            // Merge our bitmap pixels in.
+            let screen[chunk] = screen[chunk] | bitmap[i];
+
+            // Move down 1 in the  y axis.
+            let chunk = chunk + 32;
+            let i = i + 1;
+        }
+
         return;
     }
 
