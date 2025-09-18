@@ -7,6 +7,7 @@
  * A library for handling user input from the keyboard.
  */
 class Keyboard {
+    static Array mem;
     static int kbd;
 
     /** Initializes the keyboard. */
@@ -37,7 +38,7 @@ class Keyboard {
      * F1 - F12 = 141 - 152
      */
     function char keyPressed() {
-        return 0;
+        return mem[kbd];
     }
 
     /**
