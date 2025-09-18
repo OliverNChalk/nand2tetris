@@ -9,32 +9,12 @@ function Output.init 0
     pop static 1
     push constant 16384
     pop static 2
-    push constant 2
-    call Array.new 1
-    pop static 3
-    push constant 0
-    push static 3
-    add
-    push constant 255
-    pop temp 0
-    pop pointer 1
-    push temp 0
-    pop that 0
-    push constant 1
-    push static 3
-    add
-    push constant 256
-    neg
-    pop temp 0
-    pop pointer 1
-    push temp 0
-    pop that 0
     push constant 0
     return
 function Output.initMap 1
     push constant 127
     call Array.new 1
-    pop static 4
+    pop static 3
     push constant 0
     push constant 63
     push constant 63
@@ -512,15 +492,15 @@ function Output.initMap 1
     call Output.create 12
     pop temp 0
     push constant 65
-    push constant 0
-    push constant 0
-    push constant 0
-    push constant 0
-    push constant 0
-    push constant 0
-    push constant 0
-    push constant 0
-    push constant 0
+    push constant 12
+    push constant 18
+    push constant 18
+    push constant 30
+    push constant 63
+    push constant 51
+    push constant 51
+    push constant 51
+    push constant 51
     push constant 0
     push constant 0
     call Output.create 12
@@ -1386,7 +1366,7 @@ function Output.create 1
     call Array.new 1
     pop local 0
     push argument 0
-    push static 4
+    push static 3
     add
     push local 0
     pop temp 0
@@ -1499,7 +1479,7 @@ function Output.getMap 0
 label Output_1
 label Output_0
     push argument 0
-    push static 4
+    push static 3
     add
     pop pointer 1
     push that 0
@@ -1534,17 +1514,10 @@ label Output_2
     not
     if-goto Output_3
     push local 2
-    push constant 1
+    push constant 0
     eq
     not
     if-goto Output_5
-    push local 0
-    push constant 256
-    call Math.multiply 2
-    pop local 0
-    goto Output_4
-label Output_5
-label Output_4
     push local 1
     push static 2
     add
@@ -1563,6 +1536,29 @@ label Output_4
     pop pointer 1
     push temp 0
     pop that 0
+    goto Output_4
+label Output_5
+    push local 1
+    push static 2
+    add
+    push local 1
+    push static 2
+    add
+    pop pointer 1
+    push that 0
+    push local 3
+    push local 0
+    add
+    pop pointer 1
+    push that 0
+    push constant 256
+    call Math.multiply 2
+    or
+    pop temp 0
+    pop pointer 1
+    push temp 0
+    pop that 0
+label Output_4
     push local 1
     push constant 32
     add
